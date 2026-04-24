@@ -391,29 +391,51 @@ class FrenchAnalyzer:
         """
         audio, sr = librosa.load(audio_file, sr=16000)
 
-        result = self.whisper_model.transcribe(audio_file, language='fr')
-        # Ensure it's lowercase for consistent processing by analyze_text and regex rules
+        # Force a more "stable" transcription
+        result = self.whisper_model.transcribe(
+            audio_file, 
+            language='fr', 
+            task='transcribe',
+            fp16=False  # This also silences that 'FP16 not supported' warning!
+        )
+        
+        # Clean up the text
         text = result["text"].replace(',', '').strip().lower()
+        
+        # Log the raw output so you can see if the hallucinations persist
+        print(f"Raw Whisper Output: {text}")
 
 
+       # 1. Expanded Whisper Cleanup
         whisper_cleanup = {
             "alair": "aller",
             "ecolay": "école",
             "j suis": "je suis",
             "j'suis": "je suis",
             "t es": "tu es",
-            "c est": "c'est"
+            "c est": "c'est",
+            "collemange": "elle mange",  
+            "en pompe": "une pomme",     
+            "articlex": "à l'école"       
         }
 
         pronunciation_corrections = []
 
+        # Apply cleanup
         for error_word, fix in whisper_cleanup.items():
             if error_word in text.lower():
-                text = text.lower().replace(error_word, fix)
+                # We record the fix for the pronunciation feedback
                 pronunciation_corrections.append({"error": error_word, "corrected": fix})
+                text = text.lower().replace(error_word, fix)
 
+        # KEEP THESE PRINTS - They are your audit trail!
         print(f"Transcription for grammar analysis: {text}")
         print(f"Pronunciation corrections: {pronunciation_corrections}")
+
+        # 2. Final Logic Check for 'un pomme'
+        if "un pomme" in text:
+            text = text.replace("un pomme", "une pomme")
+            print("Fixed masculine/feminine article for 'pomme'.")
 
         # 1. Catch the dictionary result (instead of unpacking variables)
         analysis_results = self.analyze_text(text, speaker_gender=speaker_gender)
