@@ -1,4 +1,5 @@
 import language_tool_python
+import enchant
 import whisper
 import torch
 import librosa
@@ -26,6 +27,7 @@ class FrenchAnalyzer:
         self.grammar_tool = language_tool_python.LanguageTool('fr')
         self.grammar_tool.enabledCategories = 'GRAMMAR,TYPOGRAPHY,STYLE'
 
+        self.d = enchant.Dict("fr_FR") 
         self.whisper_model = whisper.load_model("base")
 
         self.classifier = None
@@ -36,6 +38,7 @@ class FrenchAnalyzer:
                 self.classifier = pickle.load(f)
 
         self.feedback_generator = pipeline("text-generation", model="distilgpt2")
+
 
     def apply_corrections(self, text, matches, speaker_gender="masculine"):
         """
@@ -153,6 +156,40 @@ class FrenchAnalyzer:
         """
         matches = self.grammar_tool.check(text)
         errors = []
+    
+        # 1. Dictionary Check & Auto-Fix
+        words = re.findall(r'\b\w+\b', text)
+        corrected_text = text # Start with the original text
+        
+        for word in words:
+            if not self.d.check(word):
+                suggestions = self.d.suggest(word)
+                if suggestions:
+                    best_suggestion = suggestions[0]
+                    # Automatically replace the misspelled word in our working text
+                    corrected_text = re.sub(rf'\b{word}\b', best_suggestion, corrected_text)
+                    
+                    errors.append({
+                        "error": word,
+                        "suggestions": suggestions[:3],
+                        "message": f"Le mot '{word}' n'est pas reconnu. Suggestion : {best_suggestion}"
+                    })
+
+        # 2. Now pass the partially corrected text to the grammar tool
+        # (This helps the grammar tool not get confused by misspellings)
+        matches = self.grammar_tool.check(corrected_text)
+        
+        # 3. Apply the rest of your custom grammar rules
+        final_text = self.apply_corrections(corrected_text, matches, speaker_gender)
+        
+        return final_text, errors
+
+
+        # --- NEW DICTIONARY CHECK END ---
+
+        print(f"Original text: '{text}', Speaker gender: {speaker_gender}")
+        # ... (rest of your existing regex rules)
+
 
         print(f"Original text: '{text}', Speaker gender: {speaker_gender}")
         print(f"LanguageTool found {len(matches)} matches")
