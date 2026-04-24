@@ -152,38 +152,40 @@ class FrenchAnalyzer:
     def analyze_text(self, text, speaker_gender="masculine"):
         """
         Analyze French text for grammar errors and provide corrections.
-        speaker_gender refers to the gender of the person speaking.
         """
-        matches = self.grammar_tool.check(text)
-        errors = []
-    
-        # 1. Dictionary Check & Auto-Fix
+        # 1. Dictionary Check & Auto-Fix (Fixing spelling/accents FIRST)
         words = re.findall(r'\b\w+\b', text)
-        corrected_text = text # Start with the original text
+        corrected_text = text 
+        spelling_errors = [] # Rename to keep it distinct
         
         for word in words:
             if not self.d.check(word):
                 suggestions = self.d.suggest(word)
                 if suggestions:
                     best_suggestion = suggestions[0]
-                    # Automatically replace the misspelled word in our working text
+                    # Replace misspelled word in the text we send to the grammar tool
                     corrected_text = re.sub(rf'\b{word}\b', best_suggestion, corrected_text)
                     
-                    errors.append({
+                    spelling_errors.append({
                         "error": word,
                         "suggestions": suggestions[:3],
-                        "message": f"Le mot '{word}' n'est pas reconnu. Suggestion : {best_suggestion}"
+                        "message": f"Le mot '{word}' n'est pas reconnu."
                     })
 
-        # 2. Now pass the partially corrected text to the grammar tool
-        # (This helps the grammar tool not get confused by misspellings)
-        matches = self.grammar_tool.check(corrected_text)
+        # 2. Run Grammar Tool on the ALREADY SPELLED-CHECKED text
+        # This prevents the '9 errors' issue because the spelling is now clean
+        grammar_matches = self.grammar_tool.check(corrected_text)
         
-        # 3. Apply the rest of your custom grammar rules
-        final_text = self.apply_corrections(corrected_text, matches, speaker_gender)
+        # 3. Apply custom gender/grammar rules
+        final_text = self.apply_corrections(corrected_text, grammar_matches, speaker_gender)
         
-        return final_text, errors
-
+        # IMPORTANT: We return the grammar_matches object so the UI can draw dropdowns
+        # and the spelling_errors so the user sees the accent fixes.
+        return {
+            "final_text": final_text,
+            "grammar_errors": grammar_matches,
+            "spelling_errors": spelling_errors
+        }
 
         # --- NEW DICTIONARY CHECK END ---
 
@@ -394,35 +396,87 @@ class FrenchAnalyzer:
         text = result["text"].replace(',', '').strip().lower()
 
 
-        pronunciation_corrections = []
-        if 'alair' in text:
-            text = text.replace('alair', 'aller')
-            pronunciation_corrections.append({"error": "alair", "corrected": "aller"})
-        if 'ecolay' in text:
-            text = text.replace('ecolay', 'école')
-            pronunciation_corrections.append({"error": "ecolay", "corrected": "école"})
+        whisper_cleanup = {
+            "alair": "aller",
+            "ecolay": "école",
+            "j suis": "je suis",
+            "j'suis": "je suis",
+            "t es": "tu es",
+            "c est": "c'est"
+        }
 
+        pronunciation_corrections = []
+
+        for error_word, fix in whisper_cleanup.items():
+            if error_word in text.lower():
+                text = text.lower().replace(error_word, fix)
+                pronunciation_corrections.append({"error": error_word, "corrected": fix})
 
         print(f"Transcription for grammar analysis: {text}")
         print(f"Pronunciation corrections: {pronunciation_corrections}")
 
-        # This call will now return a correctly capitalized sentence
-        errors, corrected_text = self.analyze_text(text, speaker_gender=speaker_gender)
-        print(f"Errors in order: {[error['error'] for error in errors]}")
+        # 1. Catch the dictionary result (instead of unpacking variables)
+        analysis_results = self.analyze_text(text, speaker_gender=speaker_gender)
 
+        # 2. Extract the specific items your code needs
+        errors = analysis_results["grammar_errors"]
+        corrected_text = analysis_results["final_text"]
+
+        # LanguageTool Match objects use .ruleId or .message instead of brackets
+        print(f"Errors in order: {[e.ruleId for e in errors]}")
+
+        # --- STEP 1: CONVERT OBJECTS TO DICTIONARIES ---
+        # This prevents the "Match object is not subscriptable" error
+        formatted_errors = []
+        
+        # 1. ADD YOUR MANUAL FIXES FIRST (The ones LanguageTool misses)
+        if "a école" in text or "à l'école" in text:
+            # We check if your specific manual rule was triggered
+            formatted_errors.append({
+                'error': 'a école',
+                'suggestions': ["à l'école"],
+                'message': "Utilisez l'article défini élidé 'l\'' devant un nom commençant par une voyelle."
+            })
+
+        # 2. PROCESS LANGUAGETOOL ERRORS (And override gender)
+        for error in errors:
+            original_word = error.context[error.offset : error.offset + error.errorLength]
+            
+            # Use your logic to override the default masculine suggestion
+            if original_word.lower() == "aller" and speaker_gender == "feminine":
+                suggestion = ["allée"]
+                message = "Accord féminin requis ('allée') car le locuteur est une femme."
+            else:
+                suggestion = error.replacements
+                message = error.message
+
+            formatted_errors.append({
+                'error': original_word,
+                'suggestions': suggestion,
+                'message': message
+            })
+        
+        # Now the table will show both your manual school fix AND the gender fix!
+        errors = formatted_errors
+
+        # --- STEP 2: BUILD FEEDBACK TEXT ---
         feedback_parts = []
+        
         if pronunciation_corrections:
             feedback_parts.append("Corrections de prononciation :")
             for correction in pronunciation_corrections:
                 feedback_parts.append(f"Vous avez prononcé {correction['error']} mais cela a été corrigé en {correction['corrected']}.")
 
+        # Now error['suggestions'] works because we converted it in Step 1!
         if errors and any(error['suggestions'] for error in errors):
             feedback_parts.append("Corrections grammaticales :")
-            feedback_parts += [f"Changer {error['error']} en {error['suggestions'][0]}"
-                               for error in errors if error['suggestions']]
+            for error in errors:
+                if error['suggestions']:
+                    feedback_parts.append(f"Changer {error['error']} en {error['suggestions'][0]}.")
 
         feedback_text = " ".join(feedback_parts) if feedback_parts else "Aucune erreur trouvée."
         print(f"Feedback text: {feedback_text}")
+
 
         audio_path = self.generate_feedback_audio(feedback_text) if feedback_text.strip() else None
 

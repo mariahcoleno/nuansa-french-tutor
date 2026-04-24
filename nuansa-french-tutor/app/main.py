@@ -171,17 +171,46 @@ def analyze_text():
         display_gender = "Non spécifié" # Fallback
 
     if not text:
-        return jsonify({"error": FRENCH_INTERFACE["error_no_text"]}), 400
+            return jsonify({"error": FRENCH_INTERFACE["error_no_text"]}), 400
 
-    errors, corrected_text = analyzer.analyze_text(text, speaker_gender=gender)
+    # UPDATE THIS SECTION:
+    analysis_results = analyzer.analyze_text(text, speaker_gender=gender)
+        
+    # Extract the data from the dictionary we built in analyze.py
+    corrected_text = analysis_results["final_text"]
+    grammar_matches = analysis_results["grammar_errors"]
+    spelling_errors = analysis_results["spelling_errors"]
+
+    # We use spelling_errors + grammar_matches for the 'errors' list the UI expects
+    # This keeps your UI working without needing to rewrite the frontend!
+    # 1. Initialize the error list with spelling fixes
+    all_errors = spelling_errors 
+
+    # 2. Format the grammar matches so the UI Table can read them
+    for m in grammar_matches:
+        all_errors.append({
+            "error": text[m.offset:m.offset + m.errorLength], # This fills the 'Original' column
+            "suggestions": m.replacements[:3],               # This fills the 'Suggestion' column
+            "message": m.message,
+            "context": m.context
+        })
+
+    # 3. Handle custom grammar fixes (like 'allée' or 'ma mère') 
+    # if they aren't already in grammar_matches
+    if corrected_text != text and not grammar_matches and not spelling_errors:
+        all_errors.append({
+            "error": "Grammaire/Genre",
+            "suggestions": [corrected_text],
+            "message": "Correction d'accord personnalisée."
+        })
 
     result = {
         "transcription": text,
-        "errors": errors,
+        "errors": all_errors,
         "corrected_text": corrected_text,
-        "accent": "N/A", # Accent is not determined for text analysis
-        "audio": None, # No audio for text analysis
-        "pronunciation_corrections": [] # No pronunciation corrections for text analysis
+        "accent": "N/A", 
+        "audio": None, 
+        "pronunciation_corrections": [] 
     }
 
     response = {
