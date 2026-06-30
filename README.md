@@ -1,5 +1,7 @@
 ## Nuansa: The AI-Driven French Tutor
 
+[🎥 Watch the demo here](https://drive.google.com/file/d/1Pg62pcAmxF_dRQyI7ZhqZzax-O6a576N/view?usp=sharing)
+
 Note: This project serves as a technical case study in LLM orchestration, NLP pipelines, and systematic model evaluation. It is part of my technical portfolio as I seek my next role as a Strategic Technical Program Lead.
 
 This is the official repository for Nuansa, a company focused on building AI-powered solutions for intermediate language learners. 
