@@ -2,7 +2,9 @@
 
 [🎥 Watch the demo here](https://drive.google.com/file/d/1Pg62pcAmxF_dRQyI7ZhqZzax-O6a576N/view?usp=sharing)
 
-Note: This project serves as a technical case study in LLM orchestration, NLP pipelines, and systematic model evaluation. It is part of my technical portfolio as I seek my next role as a Strategic Technical Program Lead.
+This project serves as a technical case study demonstrating end-to-end AI product development, LLM orchestration, multimodal AI, NLP pipelines, speech AI, and systematic AI evaluation.
+
+As the project lead, I defined the product vision, directed the overall system architecture, established product requirements, designed the AI evaluation strategy, and coordinated AI-assisted development workflows to deliver a production-ready AI-powered language learning application.
 
 This is the official repository for Nuansa, a company focused on building AI-powered solutions for intermediate language learners. 
 This respository contains our flagship product, an AI-Driven French Tutor, which is a personal AI tutor designed to help intermediate French learners achieve nuanced fluency.
@@ -15,6 +17,25 @@ The web application provides real-time, personalized feedback on both grammar an
   - Speech-to-Text (STT): Integrates OpenAI Whisper for accurate transcription of spoken French, with custom rules to correct phonetic misspellings.
   - Text-to-Speech (TTS): Generates natural-sounding, custom audio feedback in French using gTTS (Google Text-to-Speech).
 - Intuitive User Interface: A simple web interface with an interactive error table that provides explainability for corrections, showing the error, a suggested fix, and the error type.
+
+### Technical Leadership
+As project lead, I was responsible for:
+- Defining the product vision and user experience.
+- Designing the overall AI system architecture.
+- Establishing product requirements and technical priorities.
+- Designing evaluation criteria for transcription accuracy, grammar quality, pronunciation quality, and user explainability.
+- Coordinating AI-assisted development using Claude, Gemini, ChatGPT, and Grok.
+- Iteratively validating functionality through testing and prompt refinement.
+- Integrating multiple AI services into a single production workflow.
+
+## AI Evaluation
+Nuansa incorporates multiple evaluation layers throughout the AI pipeline:
+- Speech transcription accuracy
+- Grammar correction quality
+- Pronunciation analysis consistency
+- Human-readable explanations for every correction
+- End-to-end workflow validation
+- Functional testing across text and speech inputs
 
 ### Screenshots
 #### Main Interface (Initial State)
@@ -40,6 +61,29 @@ This example shows text analysis of the sentence "Je suis aller chez mon mère" 
 - French Explanations: Provides detailed explanations in French for each grammatical correction.
 
 ![GUI TextInputResults](screenshots/text_input_results.png)
+
+## System Architecture
+
+Speech Input
+        │
+        ▼
+OpenAI Whisper
+        │
+        ▼
+Speech Transcription
+        │
+        ▼
+Grammar Engine
+(language-tool-python + regex)
+        │
+        ▼
+Pronunciation Analysis
+        │
+        ▼
+Text-to-Speech (gTTS)
+        │
+        ▼
+Flask Web Interface
 
 ### Files
 - `nuansa-french-tutor/app/main.py`: Manages the Flask application, handling routes for the homepage and analysis requests while serving static files like audio feedback.
@@ -139,6 +183,7 @@ If you encounter issues, check for port conflicts with lsof -i :5001 or run on a
 - All rights reserved. Contact colenomariah92@gmail.com for licensing inquiries.
 
 ### Development Notes
-- Application developed through iterative prompt engineering with AI tools (Claude/Grok/Gemini/ChatGPT) for rapid prototyping and learning.
-- Images developed through iterative prompt engineeering with AI tools (ChatGPT) and GIMP.
+- AI-assisted development tools (Claude, Gemini, ChatGPT, and Grok) were used to accelerate prototyping, debugging, documentation, and implementation.
+- As project lead, I directed the overall system architecture, product requirements, AI evaluation strategy, product design decisions, and technical direction.
+- Documentation graphics and interface illustrations were created using ChatGPT and refined with GIMP.
  
