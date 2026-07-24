@@ -1,4 +1,4 @@
-## Nuansa: The AI-Driven French Tutor
+## Nuansa: The AI-driven French Tutor
 
 [🎥 Watch the demo here](https://drive.google.com/file/d/1Pg62pcAmxF_dRQyI7ZhqZzax-O6a576N/view?usp=sharing)
 
@@ -6,9 +6,11 @@ This project serves as a technical case study demonstrating end-to-end AI produc
 
 As the project lead, I defined the product vision, directed the overall system architecture, established product requirements, designed the AI evaluation strategy, and coordinated AI-assisted development workflows to deliver a production-ready AI-powered language learning application.
 
-This is the official repository for Nuansa, a company focused on building AI-powered solutions for intermediate language learners. 
-This respository contains our flagship product, an AI-Driven French Tutor, which is a personal AI tutor designed to help intermediate French learners achieve nuanced fluency.
-The web application provides real-time, personalized feedback on both grammar and pronunciation, helping users get unstuck and accelerate their progress.
+This repository contains Nuansa, an AI-powered French tutoring application designed to help intermediate language learners achieve nuanced fluency.
+
+As the project lead, I defined the product vision, directed the overall system architecture, established product requirements, designed the AI evaluation strategy, and led the development of an end-to-end AI learning platform.
+
+The web application provides real-time, personalized feedback on grammar, pronunciation, and speech, combining NLP, speech recognition, text-to-speech, and LLM-based workflows to help users improve their French skills.
 
 ### Features
 - Real-time Personalized Feedback: Provides instant, gender-aware grammar corrections (e.g., past participle agreement) and pronunciation analysis.
