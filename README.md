@@ -8,8 +8,6 @@ As the project lead, I defined the product vision, directed the overall system a
 
 This repository contains Nuansa, an AI-powered French tutoring application designed to help intermediate language learners achieve nuanced fluency.
 
-As the project lead, I defined the product vision, directed the overall system architecture, established product requirements, designed the AI evaluation strategy, and led the development of an end-to-end AI learning platform.
-
 The web application provides real-time, personalized feedback on grammar, pronunciation, and speech, combining NLP, speech recognition, text-to-speech, and LLM-based workflows to help users improve their French skills.
 
 ### Features
