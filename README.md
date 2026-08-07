@@ -2,11 +2,11 @@
 
 [🎥 Watch the demo here](https://drive.google.com/file/d/1Pg62pcAmxF_dRQyI7ZhqZzax-O6a576N/view?usp=sharing)
 
-Nuansa is an AI-powered language learning application demonstrating end-to-end AI product leadership, including LLM orchestration, multimodal AI integration, speech AI pipelines, NLP workflows, and systematic AI evaluation.
+Nuansa is an AI-powered language learning application demonstrating end-to-end AI product leadership, including multimodal AI integration, speech AI pipelines, NLP workflows, and systematic AI evaluation.
 
 As the project lead, I defined the product vision, established product requirements, directed the AI system architecture, designed evaluation strategies, and coordinated AI-assisted development workflows to deliver a production-ready AI application.
 
-The application provides real-time personalized feedback on grammar, pronunciation, and speech by combining NLP, speech recognition, text-to-speech, and LLM-based workflows to help intermediate French learners achieve nuanced fluency.
+The application provides real-time personalized feedback on grammar, pronunciation, and speech by combining NLP, speech recognition, text-to-speech, and AI evaluation workflows to deliver explainable language feedback.
 
 ### Features
 - Real-time Personalized Feedback: Provides instant, gender-aware grammar corrections (e.g., past participle agreement) and pronunciation analysis.
@@ -22,7 +22,7 @@ As project lead, I was responsible for:
 - Designing the overall AI system architecture.
 - Establishing product requirements and technical priorities.
 - Designing evaluation criteria for transcription accuracy, grammar quality, pronunciation quality, and user explainability.
-- Coordinating AI-assisted development using Claude, Gemini, ChatGPT, and Grok.
+- Coordinating AI-assisted engineering workflows using Claude, Gemini, ChatGPT, and Grok to accelerate prototyping, debugging, documentation, and iterative product development.
 - Iteratively validating functionality through testing and prompt refinement.
 - Integrating multiple AI services into a single production workflow.
 
@@ -181,7 +181,7 @@ If you encounter issues, check for port conflicts with lsof -i :5001 or run on a
 - All rights reserved. Contact colenomariah92@gmail.com for licensing inquiries.
 
 ### Development Notes
-- AI-assisted development tools (Claude, Gemini, ChatGPT, and Grok) were used to accelerate prototyping, debugging, documentation, and implementation.
+- Modern AI engineering tools (Claude, Gemini, ChatGPT, and Grok) were used to accelerate prototyping, debugging, documentation, and iterative refinement during development.
 - As project lead, I directed the overall system architecture, product requirements, AI evaluation strategy, product design decisions, and technical direction.
 - Documentation graphics and interface illustrations were created using ChatGPT and refined with GIMP.
  
