@@ -1,4 +1,4 @@
-## Nuansa: The AI-driven French Tutor
+## Nuansa: An AI-Powered French Tutor — End-to-End AI Product Development Case Study
 
 [🎥 Watch the demo here](https://drive.google.com/file/d/1Pg62pcAmxF_dRQyI7ZhqZzax-O6a576N/view?usp=sharing)
 
