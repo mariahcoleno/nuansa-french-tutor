@@ -4,11 +4,9 @@
 
 Nuansa is an AI-powered language learning application demonstrating end-to-end AI product leadership, including LLM orchestration, multimodal AI integration, speech AI pipelines, NLP workflows, and systematic AI evaluation.
 
-As the project lead, I defined the product vision, directed the overall system architecture, established product requirements, designed the AI evaluation strategy, and coordinated AI-assisted development workflows to deliver a production-ready AI-powered language learning application.
+As the project lead, I defined the product vision, established product requirements, directed the AI system architecture, designed evaluation strategies, and coordinated AI-assisted development workflows to deliver a production-ready AI application.
 
-This repository contains Nuansa, an AI-powered French tutoring application designed to help intermediate language learners achieve nuanced fluency.
-
-The web application provides real-time, personalized feedback on grammar, pronunciation, and speech, combining NLP, speech recognition, text-to-speech, and LLM-based workflows to help users improve their French skills.
+The application provides real-time personalized feedback on grammar, pronunciation, and speech by combining NLP, speech recognition, text-to-speech, and LLM-based workflows to help intermediate French learners achieve nuanced fluency.
 
 ### Features
 - Real-time Personalized Feedback: Provides instant, gender-aware grammar corrections (e.g., past participle agreement) and pronunciation analysis.
