@@ -2,7 +2,7 @@
 
 [🎥 Watch the demo here](https://drive.google.com/file/d/1Pg62pcAmxF_dRQyI7ZhqZzax-O6a576N/view?usp=sharing)
 
-This project serves as a technical case study demonstrating end-to-end AI product development, LLM orchestration, multimodal AI, NLP pipelines, speech AI, and systematic AI evaluation.
+Nuansa is an AI-powered language learning application demonstrating end-to-end AI product leadership, including LLM orchestration, multimodal AI integration, speech AI pipelines, NLP workflows, and systematic AI evaluation.
 
 As the project lead, I defined the product vision, directed the overall system architecture, established product requirements, designed the AI evaluation strategy, and coordinated AI-assisted development workflows to deliver a production-ready AI-powered language learning application.
 
