@@ -108,7 +108,7 @@ Flask Web Interface
   
 ### Setup and Usage
 #### Option 1: From GitHub (First Time Setup)
-- **Note**: Start in your Documents/Projects directory: cd ~/Desktop/Projects/ 
+- **Note**: Start in your Documents/Projects directory: cd ~/Documents/Projects/ 
 1. Clone the repository: `git clone https://github.com/mariahcoleno/nuansa-french-tutor.git`
 2. Navigate to the project's repository root directory: `cd nuansa-french-tutor/`
 3. Create a virtual environment: `python3.10 -m venv venv`
