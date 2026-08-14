@@ -217,7 +217,7 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
 ### Additional Notes
 - The app runs on port 5001 to avoid common port conflicts. Access it at `http://127.0.0.1:5001` after starting the server.
 - The first time the application runs, `language_tool_python` downloads the LanguageTool grammar engine to the local cache. This may take several minutes.
-- The `nuansa-french-tutor/app/static/audio/` directory stores audio files used by the application. Uploaded files do not need to be versioned.
+- The nuansa-french-tutor/app/static/audio/ directory contains sample and generated audio files used by the application.
 - If port 5001 is already in use, check with: `lsof -i :5001`. You can run the application on a different port by modifying the port setting in `nuansa-french-tutor/app/main.py` (for example, change `port=5001` to `port=5002`) and then access the application at `http://127.0.0.1:5002`.
 
 ### License
