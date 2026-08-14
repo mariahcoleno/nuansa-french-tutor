@@ -37,12 +37,12 @@ The Nuansa AI initiative incorporates multiple evaluation layers throughout the 
 
 ### Screenshots
 #### Main Interface (Initial State)
-This screenshot displays Nuansa's AI-driven French Tutor's main interface in its initial state, providing the core layout for user interaction. It includes the header, example errors, an empty text input field, audio upload options, and gender selection. 
+This screenshot shows the main interface of Nuansa’s AI-powered French Tutor in its initial state, providing the core layout for user interaction. It includes the header, example errors, an empty text input field, audio upload options, and gender selection. 
 
 ![GUI MainInterfaceInitial](screenshots/main_interface_initial.png)
 
 #### Main Interface (Populated with Input)
-This screenshot displays Nuansa's AI-driven French Tutor's main interface with user input, illustrating the app's readiness for analysis.
+This screenshot shows the main interface of Nuansa's AI-driven French Tutor with user input, illustrating the app's readiness for analysis.
 
 ![GUI MainInterfacePopulated](screenshots/main_interface_populated.png)
 
