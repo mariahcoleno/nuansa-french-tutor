@@ -175,7 +175,6 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
 3. Wait until the terminal displays:
    * Debugger is active!
    * Debugger PIN: ...
-   You should also see:
    * Running on http://127.0.0.1:5001
 4. Once the server is running, open a web browser and navigate to: `http://127.0.0.1:5001`. If macOS asks whether Python is allowed to find devices on the local network, allow it.
 5. Use the interface:
