@@ -27,7 +27,7 @@ As project lead, I was responsible for:
 - Integrating multiple AI services into a single production workflow.
 
 ## AI Evaluation
-Nuansa incorporates multiple evaluation layers throughout the AI pipeline:
+The Nuansa AI initiative incorporates multiple evaluation layers throughout the French Tutor pipeline:
 - Speech transcription accuracy
 - Grammar correction quality
 - Pronunciation analysis consistency
