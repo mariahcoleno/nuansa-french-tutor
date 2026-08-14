@@ -1,12 +1,12 @@
-## Nuansa: AI-Powered French Tutor — End-to-End AI Product Development Case Study
+## Nuansa: Nuansa — AI-Powered French Tutor | End-to-End AI Product Development Case Study
 
 [🎥 Watch the demo here](https://drive.google.com/file/d/1Pg62pcAmxF_dRQyI7ZhqZzax-O6a576N/view?usp=sharing)
 
-Nuansa is an AI-powered language learning application demonstrating end-to-end AI product leadership, including multimodal AI integration, speech AI pipelines, NLP workflows, and systematic AI evaluation.
+Nuansa is an independent AI product-development initiative focused on building practical AI applications. Its first product, an AI-powered French Tutor, demonstrates end-to-end AI product leadership, including multimodal AI integration, speech AI pipelines, NLP workflows, and systematic AI evaluation.
 
-As the project lead, I defined the product vision, established product requirements, directed the AI system architecture, designed evaluation strategies, and coordinated AI-assisted development workflows to deliver a production-ready AI application.
+As the project lead, I defined the product vision and requirements, directed the AI system architecture, designed evaluation strategies, and coordinated AI-assisted development workflows to deliver a production-ready AI application.
 
-The application provides real-time personalized feedback on grammar, pronunciation, and speech by combining NLP, speech recognition, text-to-speech, and AI evaluation workflows to deliver explainable language feedback.
+The French Tutor provides real-time personalized feedback on grammar, pronunciation, and speech by combining NLP, speech recognition, text-to-speech, and AI evaluation workflows to deliver explainable language feedback.
 
 ### Features
 - Real-time Personalized Feedback: Provides instant, gender-aware grammar corrections (e.g., past participle agreement) and pronunciation analysis.
