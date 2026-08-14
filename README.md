@@ -61,7 +61,7 @@ This example shows text analysis of the sentence "Je suis aller chez mon mère" 
 ![GUI TextInputResults](screenshots/text_input_results.png)
 
 ## System Architecture
-
+```
 Speech Input
         │
         ▼
@@ -82,6 +82,7 @@ Text-to-Speech (gTTS)
         │
         ▼
 Flask Web Interface
+```
 
 ### Files
 - `nuansa-french-tutor/app/main.py`: Manages the Flask application, handling routes for the homepage and analysis requests while serving static files such as audio feedback and the French tutor image.
