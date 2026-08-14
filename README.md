@@ -88,7 +88,7 @@ Flask Web Interface
 - `nuansa-french-tutor/app/main.py`: Manages the Flask application, handling routes for the homepage and analysis requests while serving static files such as audio feedback and the French tutor image.
 - `nuansa-french-tutor/app/templates/index.html`: Provides the user interface with input fields for text or audio, buttons to trigger analysis, and a section to display feedback results.
 - `nuansa-french-tutor/app/static/images/french-girl-icon.png`: French tutor image displayed in the application.
-- `nuansa-french-tutor/app/uploads/input.wav`: Sample audio file containing example input.
+- `nuansa-french-tutor/app/static/audio/input.wav`: Sample audio file containing example input.
 - `nuansa-french-tutor/src/analyze.py`: Processes audio or text input using Whisper for transcription and language_tool_python for grammar checks, generating personalized audio feedback with gTTS.
 - `nuansa-french-tutor/tests/test_language_tool.py`: Contains unit tests for grammar-checking functionality using language_tool_python.
 - `requirements.txt`: Lists the Python dependencies required to run the application.
@@ -217,7 +217,7 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
 ### Additional Notes
 - The app runs on port 5001 to avoid common port conflicts. Access it at `http://127.0.0.1:5001` after starting the server.
 - The first time the application runs, `language_tool_python` downloads the LanguageTool grammar engine to the local cache. This may take several minutes.
-- The `nuansa-french-tutor/app/uploads/` directory stores audio files used by the application. Uploaded files do not need to be versioned.
+- The `nuansa-french-tutor/app/static/audio/` directory stores audio files used by the application. Uploaded files do not need to be versioned.
 - If port 5001 is already in use, check with: `lsof -i :5001`. You can run the application on a different port by modifying the port setting in `nuansa-french-tutor/app/main.py` (for example, change `port=5001` to `port=5002`) and then access the application at `http://127.0.0.1:5002`.
 
 ### License
