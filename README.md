@@ -160,7 +160,7 @@ OpenAI Whisper requires FFmpeg to process uploaded audio files.
 1. On macOS with Homebrew: `brew install ffmpeg`
 2. Verify the installation: `ffmpeg -version`
 
-#### Run the App
+### Run the App
 After completing either setup option, make sure you are inside the **inner application source folder**:
 ```
 nuansa-french-tutor/
