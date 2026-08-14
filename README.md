@@ -200,13 +200,13 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
   - `nuansa-french-tutor/` (main Python application source code folder)
     - `app/`
       - `static/`
-        - `audio/` (generated audio feedback files)
+        - `audio/` (sample and generated audio files)
+          - `input.wav`
         - `images/`
           - `french-girl-icon.png`
       - `templates/`
         - `index.html`
-      - `uploads/`
-        - `input.wav`
+      - `uploads/` (temporary user-uploaded audio files)
       - `main.py`
     - `src/`
       - `__init__.py`
