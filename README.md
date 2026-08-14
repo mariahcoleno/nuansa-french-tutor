@@ -206,7 +206,7 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
           - `french-girl-icon.png`
       - `templates/`
         - `index.html`
-      - `uploads/` (temporary user-uploaded audio files)
+      - `uploads/` (temporary user-uploaded audio files; not versioned)
       - `main.py`
     - `src/`
       - `__init__.py`
