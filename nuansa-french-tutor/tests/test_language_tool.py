@@ -9,11 +9,11 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import unittest
 import language_tool_python
-from src.analyze import FrenchAnalyzer
+from src.analyze import FrenchAnalyzer, LANGUAGETOOL_VERSION
 
 class TestLanguageTool(unittest.TestCase):
     def setUp(self):
-        self.tool = language_tool_python.LanguageTool('fr')
+        self.tool = language_tool_python.LanguageTool('fr', language_tool_download_version=LANGUAGETOOL_VERSION)
         self.analyzer = FrenchAnalyzer()
 
     def test_grammar_check(self):
