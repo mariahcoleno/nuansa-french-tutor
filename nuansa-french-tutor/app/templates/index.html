@@ -701,14 +701,21 @@
             errorsTable.innerHTML = '';
 
             if (result.errors.length > 0) {
+                // Build cells with textContent so user text and messages are never parsed as HTML
+                const addCell = (row, text, spanClass) => {
+                    const cell = document.createElement('td');
+                    const target = spanClass ? cell.appendChild(document.createElement('span')) : cell;
+                    if (spanClass) target.className = spanClass;
+                    target.textContent = text;
+                    row.appendChild(cell);
+                };
+
                 result.errors.forEach((error, index) => {
                     const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${index + 1}</td>
-                        <td><span class="original-text">${error.error}</span></td>
-                        <td><span class="corrected-text-table">${error.suggestions[0] || 'N/A'}</span></td>
-                        <td>${error.message}</td>
-                    `;
+                    addCell(row, index + 1);
+                    addCell(row, error.error, 'original-text');
+                    addCell(row, error.suggestions[0] || 'N/A', 'corrected-text-table');
+                    addCell(row, error.message);
                     errorsTable.appendChild(row);
                 });
                 document.getElementById('errors-table').style.display = 'table';

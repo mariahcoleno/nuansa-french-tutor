@@ -171,6 +171,7 @@ nuansa-french-tutor/
 ```
 The terminal prompt should end with `nuansa-french-tutor %` with the virtual environment activated.
 1. Start the Flask application: `python3 -m app.main`
+   - For development, turn on the Flask debugger with `FLASK_DEBUG=1 python3 -m app.main` (it is off by default because it can run code from the browser).
 2. The first startup may take several minutes. LanguageTool may download its grammar engine the first time the application is run. This download may be approximately 259 MB.
 3. Wait until the terminal displays:
    * Debugger is active!
