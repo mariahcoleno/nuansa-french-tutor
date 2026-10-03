@@ -174,10 +174,10 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
    - For development, turn on the Flask debugger with `FLASK_DEBUG=1 python3 -m app.main` (it is off by default because it can run code from the browser).
 2. The first startup may take several minutes. LanguageTool may download its grammar engine the first time the application is run. This download may be approximately 259 MB.
 3. Wait until the terminal displays:
-   * Debugger is active!
-   * Debugger PIN: ...
    * Running on http://127.0.0.1:5001
-4. Once the server is running, open a web browser and navigate to: `http://127.0.0.1:5001`. If macOS asks whether Python is allowed to find devices on the local network, allow it.
+
+   With `FLASK_DEBUG=1`, it also shows "Debugger is active!" and a "Debugger PIN".
+4. Once the server is running, open a web browser and navigate to: `http://127.0.0.1:5001`. The app is only reachable from this computer.
 5. Use the interface:
    - Enter text or select an example from the dropdown and click "Analyze Text".
    - Upload a `.wav` file by clicking "Choose File", selecting the file, clicking "Open", and then clicking "Analyze Speech".
