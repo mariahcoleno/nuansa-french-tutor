@@ -8,7 +8,7 @@ import tempfile
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from flask import Flask, render_template, request, jsonify, send_file
-from src.analyze import FrenchAnalyzer
+from src.analyze import FrenchAnalyzer, words_changed
 from gtts import gTTS
 
 # Initialize Flask app with custom static folder path
@@ -41,7 +41,7 @@ PRELOADED_SENTENCES = [
     },
     {
         "text": "Il est une belle fille.",
-        "description": "Accord pronom-adjectif - devrait être 'Elle est une belle fille'"
+        "description": "Il/elle est + un/une + nom - devrait être 'C'est une belle fille'"
     }
 ]
 
@@ -189,15 +189,20 @@ def analyze_text():
     # 2. Format the grammar matches so the UI Table can read them
     for m in grammar_matches:
         all_errors.append({
-            "error": text[m.offset:m.offset + m.errorLength], # This fills the 'Original' column
+            # This fills the 'Original' column. Read from the context: LanguageTool checked the
+            # spell-corrected text, so m.offset may not line up with the raw input.
+            "error": m.context[m.offsetInContext:m.offsetInContext + m.errorLength],
             "suggestions": m.replacements[:3],               # This fills the 'Suggestion' column
             "message": m.message,
             "context": m.context
         })
 
-    # 3. Handle custom grammar fixes (like 'allée' or 'ma mère') 
-    # if they aren't already in grammar_matches
-    if corrected_text != text and not grammar_matches and not spelling_errors:
+    # 3. Add the custom-rule errors (like 'allée' or 'à l'école') with their French explanations
+    all_errors.extend(analysis_results["custom_errors"])
+
+    # 4. Fallback for any remaining correction no rule explained
+    # (ignoring the final period and capitalization apply_corrections always adds)
+    if words_changed(text, corrected_text) and not all_errors:
         all_errors.append({
             "error": "Grammaire/Genre",
             "suggestions": [corrected_text],
