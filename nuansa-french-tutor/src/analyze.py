@@ -22,6 +22,10 @@ LANGUAGETOOL_VERSION = "6.6"
 # LanguageTool rules for à/de + le/les contractions, applied to the corrected text
 CONTRACTION_RULES = {"A_LE", "DE_LE"}
 
+# LanguageTool rules never shown in the error table, because apply_corrections already fixes them
+# POINTS_2: missing period at the end of the sentence
+IGNORED_RULES = {"POINTS_2"}
+
 # Self-descriptive adjectives a feminine speaker should agree after "je suis"
 FEMININE_ADJECTIVES = {
     "content": "contente",
@@ -202,7 +206,7 @@ class FrenchAnalyzer:
 
         # 2. Run Grammar Tool on the ALREADY SPELLED-CHECKED text
         # This prevents the '9 errors' issue because the spelling is now clean
-        all_matches = self.grammar_tool.check(corrected_text)
+        all_matches = [m for m in self.grammar_tool.check(corrected_text) if m.ruleId not in IGNORED_RULES]
 
         # 3. Detect custom-rule errors (with French explanations) on the same text
         custom_errors = self._detect_custom_errors(corrected_text, speaker_gender)
@@ -239,14 +243,14 @@ class FrenchAnalyzer:
         def capitalize_if(text_to_capitalize, condition):
             return text_to_capitalize.capitalize() if condition else text_to_capitalize
 
-        def add_error(match, found_error, suggestion, message):
+        def add_error(match, found_error, suggestion, message, group=0):
             # Capitalize both error and suggestion when the match starts the sentence
-            should_capitalize = match.start() == sentence_start
+            should_capitalize = match.start(group) == sentence_start
             errors.append({
                 "error": capitalize_if(found_error, should_capitalize),
                 "suggestions": [capitalize_if(suggestion, should_capitalize)],
                 "message": message,
-                "span": match.span()
+                "span": match.span(group)
             })
 
         # 1. Élision avec à + école
@@ -317,6 +321,29 @@ class FrenchAnalyzer:
                 if current_participle not in ["allé", "alle"]:
                     add_error(match_aller, found_error_phrase, "je suis allé",
                               "Accord du participe passé : utiliser 'allé' pour un locuteur masculin avec être.")
+
+        # 9. Accord au féminin pour la locutrice (same rules as apply_corrections)
+        if speaker_gender.lower() == "feminine":
+            def overlaps_existing(match):
+                start, end = match.span(2)
+                return any(start < e_end and e_start < end for e_start, e_end in (e["span"] for e in errors))
+
+            # Participe passé en -é après "je suis" (fatigué -> fatiguée)
+            for match in re.finditer(r'\b(je suis )(\w+é)\b', text, flags=re.IGNORECASE):
+                if not overlaps_existing(match):
+                    word = match.group(2)
+                    add_error(match, word, word + "e",
+                              f"Accord au féminin : la locutrice est une femme, donc le participe passé "
+                              f"s'accorde ({word} → {word}e).", group=2)
+
+            # Adjectifs connus après "je suis" (content -> contente)
+            for match in re.finditer(r'\b(je suis )(\w+)\b', text, flags=re.IGNORECASE):
+                word = match.group(2)
+                feminine = FEMININE_ADJECTIVES.get(word.lower())
+                if feminine and not overlaps_existing(match):
+                    add_error(match, word, feminine,
+                              f"Accord au féminin : la locutrice est une femme, donc l'adjectif "
+                              f"s'accorde ({word} → {feminine}).", group=2)
 
         print(f"Found {len(errors)} custom-rule errors")
         return errors

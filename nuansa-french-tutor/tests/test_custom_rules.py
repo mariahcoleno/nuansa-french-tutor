@@ -137,6 +137,49 @@ class TestCustomRules(unittest.TestCase):
                 self.assertEqual(result["spelling_errors"], [])
 
 
+    def test_feminine_adjective_appears_in_error_table(self):
+        result = self.analyzer.analyze_text("Je suis content", speaker_gender="feminine")
+        self.assertEqual(result["final_text"], "Je suis contente.")
+        self.assertEqual(result["grammar_errors"], [])
+        self.assertEqual(len(result["custom_errors"]), 1)
+        error = result["custom_errors"][0]
+        self.assertEqual(error["error"], "content")
+        self.assertEqual(error["suggestions"], ["contente"])
+        self.assertIn("Accord au féminin", error["message"])
+        self.assertIn("content → contente", error["message"])
+
+    def test_feminine_participle_appears_in_error_table(self):
+        result = self.analyzer.analyze_text("Je suis fatigué", speaker_gender="feminine")
+        self.assertEqual(result["final_text"], "Je suis fatiguée.")
+        self.assertEqual(result["grammar_errors"], [])
+        # fatigué is also in the adjective list; it must only be reported once
+        self.assertEqual(len(result["custom_errors"]), 1)
+        error = result["custom_errors"][0]
+        self.assertEqual(error["error"], "fatigué")
+        self.assertEqual(error["suggestions"], ["fatiguée"])
+        self.assertIn("participe passé", error["message"])
+        self.assertIn("fatigué → fatiguée", error["message"])
+
+    def test_feminine_alle_reported_once(self):
+        # Both the aller rule and the -é participle rule match "je suis allé"
+        result = self.analyzer.analyze_text("Je suis allé au marché.", speaker_gender="feminine")
+        self.assertEqual(result["final_text"], "Je suis allée au marché.")
+        self.assertEqual([e["suggestions"] for e in result["custom_errors"]], [["Je suis allée"]])
+
+    def test_masculine_adjective_has_no_error_row(self):
+        result = self.analyzer.analyze_text("Je suis content", speaker_gender="masculine")
+        self.assertEqual(result["custom_errors"], [])
+
+    def test_missing_final_period_is_not_an_error(self):
+        # LanguageTool's POINTS_2 flags the missing period, but the app adds it itself
+        text = "Je suis content"
+        result = self.analyzer.analyze_text(text, speaker_gender="masculine")
+        self.assertEqual(result["final_text"], "Je suis content.")
+        self.assertEqual(result["grammar_errors"], [])
+        self.assertEqual(result["custom_errors"], [])
+        self.assertEqual(result["spelling_errors"], [])
+        self.assertFalse(words_changed(text, result["final_text"]))
+
     # --- "Grammaire/Genre" fallback row (words_changed) -------------------------
 
     def test_correct_sentence_has_no_word_changes(self):
@@ -147,7 +190,7 @@ class TestCustomRules(unittest.TestCase):
         self.assertFalse(words_changed(text, final_text))
 
     def test_word_correction_is_detected(self):
-        # No rule explains this change in the table, so the fallback row should appear
+        # A real word change counts, unlike the added period and capital letter
         text = "je suis fatigué"
         result = self.analyzer.analyze_text(text, speaker_gender="feminine")
         self.assertEqual(result["final_text"], "Je suis fatiguée.")
