@@ -16,7 +16,7 @@ from src.analyze import FrenchAnalyzer, LANGUAGETOOL_VERSION, words_changed
 class TestCustomRules(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        # Skip __init__ so the tests don't load Whisper or distilgpt2;
+        # Skip __init__ so the tests don't load Whisper;
         # analyze_text and apply_corrections only need these two tools.
         cls.analyzer = FrenchAnalyzer.__new__(FrenchAnalyzer)
         cls.analyzer.grammar_tool = language_tool_python.LanguageTool(

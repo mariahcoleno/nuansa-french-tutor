@@ -64,7 +64,6 @@ FRENCH_INTERFACE = {
     "transcription_label": "Transcription :",
     "errors_label": "Erreurs détectées :",
     "corrected_text_label": "Texte corrigé :",
-    "accent_label": "Accent détecté :",
     "pronunciation_corrections_label": "Corrections de prononciation :",
     "no_errors": "Aucune erreur détectée. Excellent travail !",
     "demo_popup": "Cette application fournit des corrections grammaticales, d'accent et de prononciation pour vous aider à améliorer votre français.",
@@ -92,7 +91,7 @@ def analyze_audio():
     - gender: 'masculine' or 'feminine' for grammar agreement
     - recruiter_mode: 'true' for demo mode with popup
 
-    Returns JSON with transcription, errors, corrections, and accent analysis.
+    Returns JSON with transcription, errors, and corrections.
     """
     recruiter_mode = request.form.get('recruiter_mode') == 'true'
     gender = request.form.get('gender', 'masculine')
@@ -126,7 +125,6 @@ def analyze_audio():
             "transcription": result["transcription"],
             "errors": result["errors"],
             "corrected_text": result["corrected_text"],
-            "accent": result["accent"],
             "audio": result.get("audio_path"),
             "pronunciation_corrections": result.get("pronunciation_corrections", []),
             "recruiter_mode": recruiter_mode,
@@ -213,7 +211,6 @@ def analyze_text():
         "transcription": text,
         "errors": all_errors,
         "corrected_text": corrected_text,
-        "accent": "N/A", 
         "audio": None, 
         "pronunciation_corrections": [] 
     }
@@ -222,7 +219,6 @@ def analyze_text():
         "transcription": result["transcription"],
         "errors": result["errors"],
         "corrected_text": result["corrected_text"],
-        "accent": result["accent"],
         "audio": result["audio"],
         "pronunciation_corrections": result["pronunciation_corrections"],
         "recruiter_mode": recruiter_mode,

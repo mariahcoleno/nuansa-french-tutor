@@ -91,6 +91,7 @@ Flask Web Interface
 - `nuansa-french-tutor/app/static/audio/input.wav`: Sample audio file containing example input.
 - `nuansa-french-tutor/src/analyze.py`: Processes audio or text input using Whisper for transcription and language_tool_python for grammar checks, generating personalized audio feedback with gTTS.
 - `nuansa-french-tutor/tests/test_language_tool.py`: Contains unit tests for grammar-checking functionality using language_tool_python.
+- `nuansa-french-tutor/tests/test_custom_rules.py`: Contains unit tests for the custom regex rules (contractions, feminine speaker agreement, and the custom-rule errors shown in the error table).
 - `requirements.txt`: Lists the Python dependencies required to run the application.
 
 ### Requirements
@@ -101,14 +102,9 @@ Flask Web Interface
 - flask==3.0.3
 - language-tool-python==2.9.3
 - torch>=2.4.0
-- transformers==4.44.2
 - gTTS==2.5.3
 - openai-whisper==20240930
-- shap==0.46.0
-- librosa==0.10.2
-- scikit-learn==1.5.1
 - numpy==1.26.4
-- plotly==5.24.0
 - pyenchant==3.2.2
   
 ### Setup and Usage
@@ -123,7 +119,7 @@ Flask Web Interface
 6. Install dependencies: `pip install -r requirements.txt`
    - If requirements.txt is missing, install manually: 
      ```
-     pip install flask==3.0.3 language-tool-python==2.9.3 torch>=2.4.0 transformers==4.44.2 gTTS==2.5.3 openai-whisper==20240930 shap==0.46.0 librosa==0.10.2 scikit-learn==1.5.1 numpy==1.26.4 plotly==5.24.0 pyenchant==3.2.2
+     pip install flask==3.0.3 language-tool-python==2.9.3 torch>=2.4.0 gTTS==2.5.3 openai-whisper==20240930 numpy==1.26.4 pyenchant==3.2.2
      ```
 7. Navigate to the **application source code folder** (the inner `nuansa-french-tutor` folder): `cd nuansa-french-tutor/`
 8. Proceed to "Run the App" below.

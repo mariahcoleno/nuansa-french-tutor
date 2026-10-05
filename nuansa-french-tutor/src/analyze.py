@@ -2,13 +2,7 @@ import language_tool_python
 import enchant
 import whisper
 import torch
-import librosa
-import numpy as np
-from transformers import pipeline
 import os
-from sklearn.svm import SVC
-import pickle
-import shap
 import re
 import uuid
 import time
@@ -54,7 +48,7 @@ def words_changed(original, corrected):
 class FrenchAnalyzer:
     """
     A comprehensive French language analyzer that provides grammar checking,
-    speech recognition, accent classification, and audio feedback generation.
+    speech recognition, and audio feedback generation.
     """
 
     def __init__(self):
@@ -66,16 +60,6 @@ class FrenchAnalyzer:
 
         self.d = enchant.Dict("fr_FR") 
         self.whisper_model = whisper.load_model("base")
-
-        self.classifier = None
-        self.shap_explainer = None
-
-        if os.path.exists("src/accent_classifier.pkl"):
-            with open("src/accent_classifier.pkl", "rb") as f:
-                self.classifier = pickle.load(f)
-
-        self.feedback_generator = pipeline("text-generation", model="distilgpt2")
-
 
     def apply_corrections(self, text, matches, speaker_gender="masculine"):
         """
@@ -353,8 +337,6 @@ class FrenchAnalyzer:
         Analyze French speech audio for pronunciation and grammar errors.
         speaker_gender refers to the gender of the person speaking.
         """
-        audio, sr = librosa.load(audio_file, sr=16000)
-
         # Force a more "stable" transcription
         result = self.whisper_model.transcribe(
             audio_file, 
@@ -458,31 +440,13 @@ class FrenchAnalyzer:
 
         audio_path = self.generate_feedback_audio(feedback_text) if feedback_text.strip() else None
 
-        features = self.extract_features(audio, sr)
-
-        if self.classifier:
-            accent = self.classifier.predict([features])[0]
-            shap_values = self.shap_explainer.shap_values([features]) if self.shap_explainer else None
-        else:
-            accent = "Unknown"
-            shap_values = None
-
         return {
             "transcription": text,
             "errors": errors,
             "corrected_text": corrected_text,
-            "accent": accent,
-            "shap_values": shap_values,
             "audio_path": audio_path,
             "pronunciation_corrections": pronunciation_corrections
         }
-
-    def extract_features(self, audio, sr):
-        """
-        Extract MFCC features from audio for accent classification.
-        """
-        mfccs = librosa.feature.mfcc(y=audio, sr=sr, n_mfcc=13)
-        return np.mean(mfccs.T, axis=0)
 
     def generate_feedback_audio(self, text, filename=None):
         """
@@ -524,28 +488,3 @@ class FrenchAnalyzer:
         except Exception as e:
             print(f"Error generating audio: {e}")
             return None
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
