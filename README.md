@@ -1,39 +1,41 @@
-## Nuansa: Nuansa — AI-Powered French Tutor | End-to-End AI Product Development Case Study
+## Nuansa — AI-Powered French Tutor | End-to-End AI Product Development Case Study
 
 [🎥 Watch the demo here](https://drive.google.com/file/d/1Pg62pcAmxF_dRQyI7ZhqZzax-O6a576N/view?usp=sharing)
 
-Nuansa is an independent AI product-development initiative focused on building practical AI applications. Its first product, an AI-powered French Tutor, demonstrates end-to-end AI product leadership, including multimodal AI integration, speech AI pipelines, NLP workflows, and systematic AI evaluation.
+Nuansa is an independent AI product-development initiative focused on building practical AI applications. Its first product, an AI-powered French Tutor, demonstrates end-to-end AI product leadership, including speech recognition, NLP, and text-to-speech integration.
 
-As the project lead, I defined the product vision and requirements, directed the AI system architecture, designed evaluation strategies, and coordinated AI-assisted development workflows to deliver a production-ready AI application.
+As the project lead, I defined the product vision and requirements, directed the AI system architecture, defined the testing approach, and coordinated AI-assisted development workflows to deliver a working AI application that runs locally.
 
-The French Tutor provides real-time personalized feedback on grammar, pronunciation, and speech by combining NLP, speech recognition, text-to-speech, and AI evaluation workflows to deliver explainable language feedback.
+The French Tutor gives explainable feedback on written and spoken French by combining speech recognition (Whisper), spelling and grammar checking (pyenchant, LanguageTool, and custom rules), and text-to-speech (gTTS).
 
 ### Features
-- Real-time Personalized Feedback: Provides instant, gender-aware grammar corrections (e.g., past participle agreement) and pronunciation analysis.
-- Rule-Based Grammar Engine: Utilizes a custom system built on language_tool_python and tailored regex patterns for highly specific corrections, including proper diacritical mark usage.
-- Dynamic Audio Integration:
-  - Speech-to-Text (STT): Integrates OpenAI Whisper for accurate transcription of spoken French, with custom rules to correct phonetic misspellings.
-  - Text-to-Speech (TTS): Generates natural-sounding, custom audio feedback in French using gTTS (Google Text-to-Speech).
-- Intuitive User Interface: A simple web interface with an interactive error table that provides explainability for corrections, showing the error, a suggested fix, and the error type.
+- Gender-Aware Grammar Feedback: Corrects grammar based on the speaker's gender (e.g., "je suis allé" vs. "je suis allée", "content" vs. "contente") and explains each correction in French.
+- Rule-Based Grammar Engine: Combines a French spell check (pyenchant), LanguageTool (via language_tool_python), and custom regex rules for common learner errors such as contractions ("à le" → "au"), noun gender ("mon mère" → "ma mère"), and accent marks.
+- Speech Input:
+  - Speech-to-Text (STT): Transcribes spoken French with OpenAI Whisper, then grammar-checks the transcription.
+  - Transcription Cleanup: A fixed list of fixes for common Whisper mistranscriptions (e.g., "alair" → "aller", "ecolay" → "école") is applied before grammar checking. This is not a pronunciation score; the app does not measure how a word was pronounced.
+- Text-to-Speech (TTS): Reads the corrected sentence aloud in French using gTTS (Google Text-to-Speech).
+- Error Table: Shows each error, a suggested fix, and an explanation in French.
+
+### Future Ideas
+- Real pronunciation scoring: compare the learner's audio with a reference pronunciation (e.g., phoneme-level alignment) to point out mispronounced sounds, instead of only fixing known mistranscriptions.
 
 ### Technical Leadership
 As project lead, I was responsible for:
 - Defining the product vision and user experience.
 - Designing the overall AI system architecture.
 - Establishing product requirements and technical priorities.
-- Designing evaluation criteria for transcription accuracy, grammar quality, pronunciation quality, and user explainability.
+- Defining what correct output looks like for grammar corrections and their French explanations, and turning it into automated tests.
 - Coordinating AI-assisted engineering workflows using Claude, Gemini, ChatGPT, and Grok to accelerate prototyping, debugging, documentation, and iterative product development.
-- Iteratively validating functionality through testing and prompt refinement.
-- Integrating multiple AI services into a single production workflow.
+- Iteratively validating functionality through automated tests and manual testing with text and audio input.
+- Integrating speech recognition, grammar checking, and text-to-speech into a single workflow.
 
-## AI Evaluation
-The Nuansa AI initiative incorporates multiple evaluation layers throughout the French Tutor pipeline:
-- Speech transcription accuracy
-- Grammar correction quality
-- Pronunciation analysis consistency
-- Human-readable explanations for every correction
-- End-to-end workflow validation
-- Functional testing across text and speech inputs
+## Testing
+The grammar and spelling logic is covered by automated unit tests in `nuansa-french-tutor/tests/`:
+- `test_custom_rules.py`: Checks the custom rules: contractions, feminine speaker agreement, "c'est" vs. "il/elle est", and the French explanations shown in the error table. It also checks that **correct sentences stay unchanged** (e.g., "Je suis à Paris.", "Les filles sont mignonnes.", "Je vais commencer à le faire.") and produce no error rows, so the rules don't over-correct.
+- `test_language_tool.py`: Checks that LanguageTool and the French dictionary catch grammar and spelling errors.
+
+Speech transcription and text-to-speech are not covered by automated tests; they were checked by hand with the sample audio files. See "Run the Tests" below.
 
 ### Screenshots
 #### Main Interface (Initial State)
@@ -50,9 +52,10 @@ This screenshot shows the main interface of Nuansa's AI-driven French Tutor with
 After the user clicks the "Analyser" button, this section displays and dynamically extends the main interface to present the analysis results. It provides comprehensive feedback for both text input and uploaded audio files.
 
 In this section:
-- The "Transcription du texte français : " field shows the original input text (or transcribed audio after phonetic misspellings have been corrected).
-- For **text input**, the app applies grammar corrections and diacritical mark corrections. It then generates custom audio feedback of the corrected sentence with integrated playback controls.
-- For **audio input**, the app first performs Speech Recognition and Transcription (e.g., converting "Je suis aller à école" from `input.wav` to text). It then applies grammar corrections, diacritical mark corrections, and pronunciation corrections based on the original audio. Finally, it generates custom audio feedback of the corrected sentence with integrated playback controls.
+- The "Transcription du texte français : " field shows the original input text (or, for audio, the Whisper transcription after known mistranscriptions have been fixed).
+- For **text input**, the app applies spelling (including accent marks) and grammar corrections.
+- For **audio input**, the app first transcribes the speech with Whisper (e.g., "Je suis aller à école" from `input.wav`), fixes known Whisper mistranscriptions, and then applies the same spelling and grammar corrections as for text.
+- In both cases, "🔊 Écouter la correction" reads the corrected sentence aloud with gTTS.
 
 This example shows text analysis of the sentence "Je suis aller chez mon mère" demonstrating the system's multi-layered error detection:
 - Grammar Corrections: Detects errors such as incorrect past participle agreement ("aller" should be "allée" for feminine gender) and incorrect determiner agreement ("mon mère" should be "ma mère"), providing the corrected sentence.
@@ -62,34 +65,40 @@ This example shows text analysis of the sentence "Je suis aller chez mon mère" 
 
 ## System Architecture
 ```
-Speech Input
-        │
-        ▼
-OpenAI Whisper
-        │
-        ▼
-Speech Transcription
-        │
-        ▼
-Grammar Engine
-(language-tool-python + regex)
-        │
-        ▼
-Pronunciation Analysis
-        │
-        ▼
-Text-to-Speech (gTTS)
-        │
-        ▼
-Flask Web Interface
+Speech Input (.wav)              Text Input
+        │                             │
+        ▼                             │
+OpenAI Whisper (transcription)        │
+        │                             │
+        ▼                             │
+Fixes for common Whisper              │
+mistranscriptions                     │
+        │                             │
+        └──────────────┬──────────────┘
+                       ▼
+          Spell Check (pyenchant, fr_FR)
+                       │
+                       ▼
+          Grammar Engine
+          (LanguageTool + custom regex rules,
+           gender-aware)
+                       │
+                       ▼
+          Flask Web Interface
+          (corrected text + error table
+           with French explanations)
+                       │
+                       ▼
+          Text-to-Speech (gTTS), on request:
+          reads the corrected sentence aloud
 ```
 
 ### Files
-- `nuansa-french-tutor/app/main.py`: Manages the Flask application, handling routes for the homepage and analysis requests while serving static files such as audio feedback and the French tutor image.
+- `nuansa-french-tutor/app/main.py`: Runs the Flask application, with routes for the homepage, text analysis (`/analyze_text`), audio analysis (`/analyze_audio`), text-to-speech (`/tts`), and static files.
 - `nuansa-french-tutor/app/templates/index.html`: Provides the user interface with input fields for text or audio, buttons to trigger analysis, and a section to display feedback results.
 - `nuansa-french-tutor/app/static/images/french-girl-icon.png`: French tutor image displayed in the application.
-- `nuansa-french-tutor/app/static/audio/input.wav`: Sample audio file containing example input.
-- `nuansa-french-tutor/src/analyze.py`: Processes audio or text input using Whisper for transcription and language_tool_python for grammar checks, generating personalized audio feedback with gTTS.
+- `nuansa-french-tutor/app/static/audio/input.wav`, `input2.wav`, `input2.m4a`: Sample audio files containing example input.
+- `nuansa-french-tutor/src/analyze.py`: Transcribes audio with Whisper, fixes common Whisper mistranscriptions, checks spelling with pyenchant and grammar with LanguageTool plus custom rules, and generates audio with gTTS.
 - `nuansa-french-tutor/tests/test_language_tool.py`: Contains unit tests for grammar-checking functionality using language_tool_python.
 - `nuansa-french-tutor/tests/test_custom_rules.py`: Contains unit tests for the custom regex rules (contractions, feminine speaker agreement, and the custom-rule errors shown in the error table).
 - `requirements.txt`: Lists the Python dependencies required to run the application.
@@ -169,17 +178,32 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
 1. Start the Flask application: `python3 -m app.main`
    - For development, turn on the Flask debugger with `FLASK_DEBUG=1 python3 -m app.main` (it is off by default because it can run code from the browser).
 2. The first startup may take several minutes. LanguageTool may download its grammar engine the first time the application is run. This download may be approximately 259 MB.
-3. Wait until the terminal displays:
-   * Running on http://127.0.0.1:5001
-
-   With `FLASK_DEBUG=1`, it also shows "Debugger is active!" and a "Debugger PIN".
-4. Once the server is running, open a web browser and navigate to: `http://127.0.0.1:5001`. The app is only reachable from this computer.
+3. Wait until the terminal displays (by default, the debugger is off):
+   ```
+    * Serving Flask app 'main'
+    * Debug mode: off
+   WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+    * Running on http://127.0.0.1:5001
+   Press CTRL+C to quit
+   ```
+   With `FLASK_DEBUG=1`, it shows `* Debug mode: on` instead, plus "Debugger is active!" and a "Debugger PIN".
+4. Once the server is running, open a web browser and navigate to: `http://127.0.0.1:5001`. The server listens on 127.0.0.1 only, so the app is only reachable from this computer.
 5. Use the interface:
-   - Enter text or select an example from the dropdown and click "Analyze Text".
-   - Upload a `.wav` file by clicking "Choose File", selecting the file, clicking "Open", and then clicking "Analyze Speech".
-   - View the transcription, grammar and pronunciation corrections, and the error table with errors, suggestions, and explanations.
-   - Listen to the generated French audio feedback.
+   - Enter text, or select an example from "Testez un texte français incorrect", and click "🔍 Analyser".
+   - Or click "Télécharger un fichier audio", choose a `.wav` file, and click "🔍 Analyser".
+   - Choose the speaker's gender ("Genre du locuteur") so agreement is corrected for the person speaking.
+   - View the transcription, the corrected text, and the error table with errors, suggestions, and French explanations.
+   - Click "🔊 Écouter la correction" to hear the corrected sentence.
 6. When finished, return to the terminal running Flask and press `Ctrl+C`. This stops the Flask development server.
+
+### Run the Tests
+From the **inner application source folder** (the same folder used to run the app), with the virtual environment activated:
+```
+python3 -m unittest discover tests
+```
+- The tests need Java 17 (for LanguageTool) and the French pyenchant dictionary, like the app itself.
+- `test_language_tool.py` loads the full analyzer, including the Whisper model, so the first run can take a few minutes.
+- All tests should finish with `OK`. The tests print debug output (such as "After contraction corrections: ...") while they run; this is expected.
 
 ### Sample Data
 - Je vais à le marché.
@@ -199,6 +223,8 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
       - `static/`
         - `audio/` (sample and generated audio files)
           - `input.wav`
+          - `input2.wav`
+          - `input2.m4a`
         - `images/`
           - `french-girl-icon.png`
       - `templates/`
@@ -209,7 +235,8 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
       - `__init__.py`
       - `analyze.py` 
     - `tests/`
-      - `test_language_tool.py` 
+      - `test_custom_rules.py`
+      - `test_language_tool.py`
 
 ### Additional Notes
 - The app runs on port 5001 to avoid common port conflicts. Access it at `http://127.0.0.1:5001` after starting the server.
@@ -222,6 +249,6 @@ The terminal prompt should end with `nuansa-french-tutor %` with the virtual env
 
 ### Development Notes
 - Modern AI engineering tools (Claude, Gemini, ChatGPT, and Grok) were used to accelerate prototyping, debugging, documentation, and iterative refinement during development.
-- As project lead, I directed the overall system architecture, product requirements, AI evaluation strategy, product design decisions, and technical direction.
+- As project lead, I directed the overall system architecture, product requirements, testing approach, product design decisions, and technical direction.
 - Documentation graphics and interface illustrations were created using ChatGPT and refined with GIMP.
  
