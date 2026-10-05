@@ -1,12 +1,7 @@
 flask==3.0.3
 language-tool-python==2.9.3
 torch>=2.4.0
-transformers==4.44.2
 gTTS==2.5.3
 openai-whisper==20240930
-shap==0.46.0
-librosa==0.10.2
-scikit-learn==1.5.1
 numpy==1.26.4
-plotly==5.24.0
 pyenchant==3.2.2
