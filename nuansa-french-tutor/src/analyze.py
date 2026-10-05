@@ -6,6 +6,7 @@ import os
 import re
 import uuid
 import time
+import unicodedata
 from gtts import gTTS
 
 # Pinned LanguageTool release. The library's default ('latest' snapshot) re-downloads
@@ -19,6 +20,14 @@ CONTRACTION_RULES = {"A_LE", "DE_LE"}
 # LanguageTool rules never shown in the error table, because apply_corrections already fixes them
 # POINTS_2: missing period at the end of the sentence
 IGNORED_RULES = {"POINTS_2"}
+
+# LanguageTool's spelling rule, deduplicated against the dictionary check in analyze_text
+SPELLING_RULE = "FR_SPELLING_RULE"
+
+ACCENT_MESSAGE = "Accent manquant ou incorrect."
+UNKNOWN_WORD_MESSAGE = "Mot non reconnu : vérifiez l'orthographe."
+# Capitalized words are reported but not corrected, since they may be names
+UNKNOWN_CAPITALIZED_MESSAGE = "Mot non reconnu — s'il s'agit d'un nom propre, ignorez cette remarque."
 
 # Self-descriptive adjectives a feminine speaker should agree after "je suis"
 FEMININE_ADJECTIVES = {
@@ -44,6 +53,23 @@ def words_changed(original, corrected):
     def normalize(text):
         return " ".join(text.strip().rstrip(".!?").split()).lower()
     return normalize(original) != normalize(corrected)
+
+
+def strip_accents(word):
+    """Lowercase a word and remove its accents ("École" -> "ecole")."""
+    decomposed = unicodedata.normalize("NFD", word.lower())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+
+def is_mid_sentence_capital(text, start):
+    """
+    True if the word starting at text[start] is capitalized but doesn't begin a sentence,
+    so it is likely a name (Mariah, Paris) and shouldn't be spell-checked.
+    """
+    if not text[start].isupper():
+        return False
+    before = text[:start].rstrip()
+    return bool(before) and not before.endswith(('.', '!', '?'))
 
 class FrenchAnalyzer:
     """
@@ -169,28 +195,62 @@ class FrenchAnalyzer:
         """
         Analyze French text for grammar errors and provide corrections.
         """
-        # 1. Dictionary Check & Auto-Fix (Fixing spelling/accents FIRST)
-        words = re.findall(r'\b\w+\b', text)
-        corrected_text = text 
-        spelling_errors = [] # Rename to keep it distinct
-        
-        for word in words:
-            if not self.d.check(word):
-                suggestions = self.d.suggest(word)
-                if suggestions:
-                    best_suggestion = suggestions[0]
-                    # Replace misspelled word in the text we send to the grammar tool
-                    corrected_text = re.sub(rf'\b{word}\b', best_suggestion, corrected_text)
-                    
-                    spelling_errors.append({
-                        "error": word,
-                        "suggestions": suggestions[:3],
-                        "message": f"Le mot '{word}' n'est pas reconnu."
-                    })
+        # 1. Dictionary check (fixing spelling/accents FIRST)
+        # Each misspelled word gets one row in the error table. Accent-only fixes
+        # ("ecole" -> "école") use the matching suggestion, other words the top suggestion.
+        # Capitalized words may be names: mid-sentence they are left alone, and at the
+        # start of a sentence only accent fixes are applied (other words are just reported).
+        spelling_errors = []
+        replacements = []  # (start, end, replacement), applied right-to-left below
+        reported = set()
+
+        for match in re.finditer(r'\b\w+\b', text):
+            word = match.group()
+            if self.d.check(word) or is_mid_sentence_capital(text, match.start()):
+                continue
+
+            suggestions = self.d.suggest(word)
+            accent_fix = next((s for s in suggestions if strip_accents(s) == strip_accents(word)), None)
+            if accent_fix:
+                # Accent fixes apply to capitalized words too, keeping the capital ("Tres" -> "Très")
+                if word[0].isupper():
+                    accent_fix = accent_fix[0].upper() + accent_fix[1:]
+                replacements.append((match.start(), match.end(), accent_fix))
+            elif suggestions and not word[0].isupper():
+                replacements.append((match.start(), match.end(), suggestions[0]))
+
+            if word.lower() in reported:
+                continue
+            reported.add(word.lower())
+            if accent_fix:
+                message = ACCENT_MESSAGE
+            elif word[0].isupper():
+                message = UNKNOWN_CAPITALIZED_MESSAGE
+            else:
+                message = UNKNOWN_WORD_MESSAGE
+            spelling_errors.append({
+                "error": word,
+                "suggestions": [accent_fix] if accent_fix else suggestions[:3],
+                "message": message
+            })
+
+        corrected_text = text
+        for start, end, replacement in reversed(replacements):
+            corrected_text = corrected_text[:start] + replacement + corrected_text[end:]
 
         # 2. Run Grammar Tool on the ALREADY SPELLED-CHECKED text
-        # This prevents the '9 errors' issue because the spelling is now clean
-        all_matches = [m for m in self.grammar_tool.check(corrected_text) if m.ruleId not in IGNORED_RULES]
+        # This prevents the '9 errors' issue because the spelling is now clean.
+        # Drop LanguageTool spelling matches on names or on words the dictionary check already reported.
+        def is_duplicate_spelling(m):
+            if m.ruleId != SPELLING_RULE:
+                return False
+            flagged = corrected_text[m.offset:m.offset + m.errorLength]
+            return is_mid_sentence_capital(corrected_text, m.offset) or flagged.lower() in reported
+
+        all_matches = [
+            m for m in self.grammar_tool.check(corrected_text)
+            if m.ruleId not in IGNORED_RULES and not is_duplicate_spelling(m)
+        ]
 
         # 3. Detect custom-rule errors (with French explanations) on the same text
         custom_errors = self._detect_custom_errors(corrected_text, speaker_gender)

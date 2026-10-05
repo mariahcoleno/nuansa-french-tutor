@@ -196,6 +196,62 @@ class TestCustomRules(unittest.TestCase):
         self.assertEqual(result["final_text"], "Je suis fatiguée.")
         self.assertTrue(words_changed(text, result["final_text"]))
 
+    # --- Spelling (dictionary check) -------------------------------------------
+
+    def test_missing_accent_is_fixed(self):
+        result = self.analyzer.analyze_text("Je vais à l'ecole.")
+        self.assertEqual(result["final_text"], "Je vais à l'école.")
+        self.assertEqual(len(result["spelling_errors"]), 1)
+        error = result["spelling_errors"][0]
+        self.assertEqual(error["error"], "ecole")
+        self.assertEqual(error["suggestions"], ["école"])
+        self.assertEqual(result["grammar_errors"], [])
+
+    def test_capitalized_missing_accent_is_fixed(self):
+        result = self.analyzer.analyze_text("Tres bien.")
+        self.assertEqual(result["final_text"], "Très bien.")
+        self.assertEqual(len(result["spelling_errors"]), 1)
+        error = result["spelling_errors"][0]
+        self.assertEqual(error["error"], "Tres")
+        self.assertEqual(error["suggestions"], ["Très"])
+        self.assertEqual(error["message"], "Accent manquant ou incorrect.")
+
+    def test_mid_sentence_name_is_unchanged(self):
+        # LanguageTool's spelling rule flags "Mariah" too; neither check may report it
+        text = "Je m'appelle Mariah."
+        result = self.analyzer.analyze_text(text)
+        self.assertEqual(result["final_text"], text)
+        self.assertEqual(result["spelling_errors"], [])
+        self.assertEqual(result["grammar_errors"], [])
+        self.assertEqual(result["custom_errors"], [])
+
+    def test_sentence_initial_name_is_reported_but_unchanged(self):
+        # "Mariah" may be a name, so it gets a row but isn't corrected; "Paris" is a known word
+        text = "Mariah aime Paris."
+        result = self.analyzer.analyze_text(text)
+        self.assertEqual(result["final_text"], text)
+        self.assertEqual([e["error"] for e in result["spelling_errors"]], ["Mariah"])
+        self.assertEqual(result["spelling_errors"][0]["message"],
+                         "Mot non reconnu — s'il s'agit d'un nom propre, ignorez cette remarque.")
+        self.assertEqual(result["grammar_errors"], [])
+        self.assertEqual(result["custom_errors"], [])
+
+    def test_misspelled_word_uses_top_suggestion_with_row(self):
+        result = self.analyzer.analyze_text("Le foteuil est grand.")
+        self.assertEqual(result["final_text"], "Le fauteuil est grand.")
+        self.assertEqual(len(result["spelling_errors"]), 1)
+        error = result["spelling_errors"][0]
+        self.assertEqual(error["error"], "foteuil")
+        self.assertIn("fauteuil", error["suggestions"])
+        self.assertLessEqual(len(error["suggestions"]), 3)
+        self.assertEqual(error["message"], "Mot non reconnu : vérifiez l'orthographe.")
+        self.assertEqual(result["grammar_errors"], [])
+
+    def test_repeated_misspelling_reported_once(self):
+        result = self.analyzer.analyze_text("Le foteuil et le foteuil.")
+        self.assertEqual(result["final_text"], "Le fauteuil et le fauteuil.")
+        self.assertEqual([e["error"] for e in result["spelling_errors"]], ["foteuil"])
+
 
 if __name__ == '__main__':
     unittest.main()
