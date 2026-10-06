@@ -394,26 +394,37 @@ class FrenchAnalyzer:
         print(f"Found {len(errors)} custom-rule errors")
         return errors
 
-    def transcribe(self, audio, model=None):
+    def transcribe(self, audio):
         """
-        Transcribe French speech with Whisper and return the raw text.
+        Transcribe French speech (a file path or 16 kHz samples) with the "base" Whisper
+        model and return the raw text.
         """
-        return self.transcribe_result(audio, model)["text"].strip()
-
-    def transcribe_result(self, audio, model=None):
-        """
-        Transcribe French speech (a file path or 16 kHz samples) with Whisper and return
-        Whisper's full result, including the segments' no-speech probabilities.
-        Uses the "base" model unless another model is given.
-        No mistranscription fixes are applied, so the read-aloud mode sees what Whisper heard.
-        """
-        model = model or self.whisper_model
         # Force a more "stable" transcription
-        return model.transcribe(
+        result = self.whisper_model.transcribe(
             audio,
             language='fr',
             task='transcribe',
             fp16=False  # This also silences that 'FP16 not supported' warning!
+        )
+        return result["text"].strip()
+
+    def transcribe_read_aloud(self, audio):
+        """
+        Transcribe a read-aloud recording with the "small" Whisper model and return Whisper's
+        full result, including each segment's no_speech_prob and avg_logprob.
+        No mistranscription fixes are applied, so the read-aloud mode sees what Whisper heard.
+        """
+        return self.read_aloud_whisper_model.transcribe(
+            audio,
+            language='fr',  # forced, so near-silence isn't "detected" as another language
+            task='transcribe',
+            # A single deterministic pass: Whisper's default retries at higher temperatures
+            # sample randomly when unsure, giving a different (often invented) transcription
+            # on each try, which a pronunciation check must not show
+            temperature=0,
+            # The target sentence is deliberately not passed as initial_prompt,
+            # since it would make Whisper write the expected words and hide real mistakes
+            fp16=False
         )
 
     def analyze_speech(self, audio_file, speaker_gender="masculine"):

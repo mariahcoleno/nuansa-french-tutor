@@ -9,7 +9,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import unittest
 import numpy as np
-from src.read_aloud import compare_words, is_silent, no_speech_detected, normalize_word
+from src.read_aloud import (MIN_AVG_LOGPROB, NO_SPEECH, SPEECH, STATUS_MESSAGES, UNCLEAR,
+                            compare_words, is_silent, normalize_word, speech_status)
 
 
 class TestReadAloud(unittest.TestCase):
@@ -74,6 +75,33 @@ class TestReadAloud(unittest.TestCase):
         result = compare_words("Je vais au marché.", "Je vais au manger")
         self.assertEqual(self.unrecognized(result), ["marché."])
 
+    # --- Hyphens ------------------------------------------------------------
+
+    def test_words_whisper_joined_with_hyphens_are_compared_one_by_one(self):
+        # Measured: Whisper heard input.wav as one hyphenated word
+        result = compare_words("Je mange à l'école.", "Jsui-Alaire-A-Icole.")
+        self.assertEqual(self.unrecognized(result), ["Je", "mange", "l'école."])
+        self.assertEqual((result["matched"], result["total"]), (1, 4))
+        result = compare_words("Je vais au marché.", "Je-vais au marché")
+        self.assertEqual(self.unrecognized(result), [])
+
+    def test_hyphenated_french_words(self):
+        target = "Il va peut-être venir."
+        # With or without the hyphen, peut-être is recognized and shown as one word
+        for heard in ["Il va peut-être venir.", "il va peut être venir"]:
+            with self.subTest(heard=heard):
+                result = compare_words(target, heard)
+                self.assertEqual(self.unrecognized(result), [])
+                self.assertEqual((result["matched"], result["total"]), (4, 4))
+        # Only part of it heard: the whole word is red, and the score counts it once
+        result = compare_words(target, "Il va peut venir")
+        self.assertEqual([w["text"] for w in result["words"]], ["Il", "va", "peut-être", "venir."])
+        self.assertEqual(self.unrecognized(result), ["peut-être"])
+        self.assertEqual((result["matched"], result["total"]), (3, 4))
+        # Inverted questions and other hyphens (Unicode hyphen U+2010)
+        result = compare_words("Où vas-tu ?", "ou vas‐tu")
+        self.assertEqual(self.unrecognized(result), [])
+
     def test_display_keeps_target_spelling(self):
         result = compare_words("Je mange à l'école.", "je mange a l'ecole")
         self.assertEqual([w["text"] for w in result["words"]], ["Je", "mange", "à", "l'école."])
@@ -108,18 +136,73 @@ class TestReadAloud(unittest.TestCase):
         audio[16000:16000 + 3200] = self.tone(-20)[:3200]
         self.assertFalse(is_silent(audio))
 
-    def test_no_speech_detected(self):
-        # The browser test: echo cancellation removed the sound and Whisper invented a word
-        self.assertTrue(no_speech_detected("Météorite.", [{"no_speech_prob": 0.85}]))
-        self.assertTrue(no_speech_detected("", []))
-        self.assertTrue(no_speech_detected(" ... ", [{"no_speech_prob": 0.1}]))
-        self.assertTrue(no_speech_detected("Merci.", [{"no_speech_prob": 0.7}, {"no_speech_prob": 0.9}]))
+    def segment(self, no_speech_prob, avg_logprob):
+        return {"no_speech_prob": no_speech_prob, "avg_logprob": avg_logprob}
+
+    def test_no_words_is_no_speech(self):
+        self.assertEqual(speech_status("", []), NO_SPEECH)
+        self.assertEqual(speech_status(" ... ", [self.segment(0.1, -0.3)]), NO_SPEECH)
+
+    # Values below are the measurements listed next to the thresholds in src/read_aloud.py
+
+    def test_high_no_speech_prob_is_no_speech(self):
+        # The browser test: Whisper invented "meteorite" from near-silent audio
+        # (assumed values; the recording itself wasn't measured)
+        self.assertEqual(speech_status("Météorite.", [self.segment(0.85, -0.6)]), NO_SPEECH)
+        # Generated: reversed TTS
+        self.assertEqual(speech_status("Il serait moïve...", [self.segment(0.53, -1.26)]), NO_SPEECH)
+        self.assertEqual(speech_status("Merci.", [self.segment(0.7, -0.5), self.segment(0.9, -0.5)]),
+                         NO_SPEECH)
+
+    def test_unsure_words_are_unclear(self):
+        # Generated: muffled TTS, caught only by MIN_AVG_LOGPROB
+        self.assertEqual(speech_status("Vous vous remerciez.", [self.segment(0.40, -1.22)]), UNCLEAR)
+        self.assertEqual(speech_status("Euh merci", [self.segment(0.3, -2.0)]), UNCLEAR)
+        # A non-speech segment next to an unsure speech segment is still unclear
+        self.assertEqual(speech_status("Euh merci", [self.segment(0.9, -0.5), self.segment(0.3, -1.5)]),
+                         UNCLEAR)
+
+    def test_logprob_cutoff_between_human_samples_and_muffled_clip(self):
+        self.assertTrue(-1.22 < MIN_AVG_LOGPROB < -1.16)
+
+    def test_status_messages(self):
+        self.assertEqual(STATUS_MESSAGES[NO_SPEECH],
+                         "Aucune parole détectée. Rapprochez-vous du micro et réessayez.")
+        self.assertEqual(STATUS_MESSAGES[UNCLEAR], "Parole peu claire, réessayez en articulant.")
 
     def test_speech_detected(self):
-        self.assertFalse(no_speech_detected("Je vais au marché.", [{"no_speech_prob": 0.03}]))
-        # One segment of speech is enough
-        self.assertFalse(no_speech_detected("Je vais au marché.",
-                                            [{"no_speech_prob": 0.9}, {"no_speech_prob": 0.1}]))
+        # TTS, clear and quiet (peak -50 dB)
+        self.assertEqual(speech_status("Je vais au marché.", [self.segment(0.03, -0.44)]), SPEECH)
+        self.assertEqual(speech_status("Je vais au marché.", [self.segment(0.35, -0.51)]), SPEECH)
+        # Human sample recordings, accented but real readings
+        self.assertEqual(speech_status("Jsui-Alaire-A-Icole.", [self.segment(0.11, -1.03)]), SPEECH)
+        self.assertEqual(speech_status("Allemands et Pomme sont équilés.", [self.segment(0.22, -1.12)]),
+                         SPEECH)
+        self.assertEqual(speech_status("Allemands et Pomme sont équilés.", [self.segment(0.23, -1.16)]),
+                         SPEECH)
+        # One confident speech segment is enough
+        self.assertEqual(speech_status("Je vais au marché.",
+                                       [self.segment(0.9, -2.0), self.segment(0.1, -0.4)]), SPEECH)
+
+    def test_read_aloud_transcription_settings(self):
+        from src.analyze import FrenchAnalyzer
+
+        class FakeModel:
+            def transcribe(self, audio, **options):
+                self.options = options
+                return {"text": " Je vais au marché. ", "segments": []}
+
+        analyzer = FrenchAnalyzer.__new__(FrenchAnalyzer)  # skips loading the real models
+        analyzer.read_aloud_whisper_model = FakeModel()
+        analyzer.transcribe_read_aloud(np.zeros(16000))
+        options = analyzer.read_aloud_whisper_model.options
+        # Forced French, so near-silence isn't "detected" as another language ("Això.")
+        self.assertEqual(options["language"], "fr")
+        self.assertEqual(options["task"], "transcribe")
+        # One deterministic pass, no random retries at higher temperatures
+        self.assertEqual(options["temperature"], 0)
+        # The target sentence is never given as a hint
+        self.assertNotIn("initial_prompt", options)
 
     def test_normalize_word(self):
         self.assertEqual(normalize_word("Marché."), "marche")
