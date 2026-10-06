@@ -3,13 +3,16 @@ import os
 import uuid
 import time
 import tempfile
+import subprocess
 
 # Add parent directory to path for importing custom modules
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from flask import Flask, render_template, request, jsonify, send_file
 from src.analyze import FrenchAnalyzer, words_changed
+from src.read_aloud import NO_SPEECH_MESSAGE, compare_words, is_silent, no_speech_detected
 from gtts import gTTS
+from whisper import load_audio
 
 # Initialize Flask app with custom static folder path
 app = Flask(__name__, static_folder=os.path.join(os.path.dirname(__file__), 'static'))
@@ -45,6 +48,19 @@ PRELOADED_SENTENCES = [
     }
 ]
 
+# Sentences for the read-aloud mode: the corrected versions of PRELOADED_SENTENCES.
+# "allé"/"allée" depends on the speaker's gender, like in the grammar analysis.
+READ_ALOUD_SENTENCES = [
+    {"masculine": "Je vais au marché.", "feminine": "Je vais au marché."},
+    {"masculine": "Je suis allé chez ma mère.", "feminine": "Je suis allée chez ma mère."},
+    {"masculine": "Elle mange une pomme.", "feminine": "Elle mange une pomme."},
+    {"masculine": "Je mange à l'école.", "feminine": "Je mange à l'école."},
+    {"masculine": "C'est une belle fille.", "feminine": "C'est une belle fille."},
+]
+
+# Browser recordings arrive in these formats and are converted to .wav with ffmpeg
+RECORDING_EXTENSIONS = {".webm", ".ogg", ".mp4", ".m4a"}
+
 # French interface text
 FRENCH_INTERFACE = {
     "page_title": "Analyseur de Français - Correction Grammaticale et Prononciation",
@@ -79,6 +95,7 @@ def index():
     """
     return render_template('index.html',
                             sentences=PRELOADED_SENTENCES,
+                            read_aloud_sentences=READ_ALOUD_SENTENCES,
                             interface=FRENCH_INTERFACE)
 
 @app.route('/analyze_audio', methods=['POST'])
@@ -230,6 +247,85 @@ def analyze_text():
         response["popup"] = FRENCH_INTERFACE["demo_popup"]
 
     return jsonify(response)
+
+@app.route('/read_aloud', methods=['POST'])
+def read_aloud():
+    """
+    Compares a recording of the learner reading a practice sentence with the sentence itself.
+
+    Expected form data:
+    - audio: .wav upload, or a browser recording (.webm, .ogg, .mp4, .m4a) converted with ffmpeg
+    - sentence: index into READ_ALOUD_SENTENCES
+    - gender: 'masculine' or 'feminine', picks the sentence form
+
+    Returns JSON with the target sentence, the raw Whisper transcription, and each target
+    word marked as recognized or not. No Whisper mistranscription fixes are applied,
+    since they would hide the words the app didn't recognize.
+    If no speech is detected, returns "no_speech": true and a French message instead.
+    """
+    index = request.form.get('sentence', '')
+    if not index.isdigit() or int(index) >= len(READ_ALOUD_SENTENCES):
+        return jsonify({"error": "Phrase inconnue"}), 400
+    sentence = READ_ALOUD_SENTENCES[int(index)]
+    gender = 'feminine' if request.form.get('gender') == 'feminine' else 'masculine'
+    target = sentence[gender]
+
+    if 'audio' not in request.files:
+        return jsonify({"error": FRENCH_INTERFACE["error_no_audio"]}), 400
+
+    audio = request.files['audio']
+    extension = os.path.splitext(audio.filename or '')[1].lower()
+    if extension != '.wav' and extension not in RECORDING_EXTENSIONS:
+        return jsonify({"error": "Format audio non pris en charge"}), 400
+
+    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    base = os.path.join(app.config['UPLOAD_FOLDER'], f'read_aloud_{uuid.uuid4()}')
+    uploaded = base + extension
+    wav = base + '.wav'
+    audio.save(uploaded)
+
+    try:
+        if extension != '.wav':
+            try:
+                subprocess.run(["ffmpeg", "-y", "-i", uploaded, "-ar", "16000", "-ac", "1", wav],
+                               check=True, capture_output=True, timeout=60)
+            except (OSError, subprocess.SubprocessError) as e:
+                print(f"ffmpeg conversion failed: {e}")
+                return jsonify({"error": "Impossible de convertir l'enregistrement (ffmpeg est-il installé ?)"}), 500
+
+        # Silent or near-silent recordings (e.g. the microphone's echo cancellation removed
+        # the sound) make Whisper invent words, so no transcription is shown for them
+        no_speech = jsonify({"target": target, "no_speech": True, "message": NO_SPEECH_MESSAGE})
+        samples = load_audio(wav)
+        if is_silent(samples):
+            print("Read-aloud: recording is silent")
+            return no_speech
+
+        # The target sentence is deliberately not passed to Whisper as a prompt,
+        # since it would make Whisper write the expected words and hide real mistakes
+        result = analyzer.transcribe_result(samples, model=analyzer.read_aloud_whisper_model)
+        heard = result["text"].strip()
+        print(f"Read-aloud target: '{target}', heard: '{heard}', "
+              f"no-speech probabilities: {[round(s['no_speech_prob'], 2) for s in result['segments']]}")
+        if no_speech_detected(heard, result["segments"]):
+            return no_speech
+
+        comparison = compare_words(target, heard)
+
+        return jsonify({
+            "target": target,
+            "no_speech": False,
+            "heard": heard,
+            "words": comparison["words"],
+            "matched": comparison["matched"],
+            "total": comparison["total"]
+        })
+
+    finally:
+        # Clean up temporary files
+        for path in {uploaded, wav}:
+            if os.path.exists(path):
+                os.remove(path)
 
 @app.route('/tts', methods=['POST'])
 def text_to_speech():

@@ -409,6 +409,65 @@
             image-rendering: auto;
         }
 
+        .read-aloud-section {
+            border-top: 1px solid #e1e5e9;
+            padding-top: 30px;
+            margin-top: 30px;
+        }
+
+        .read-aloud-section h3 {
+            color: #2d3748;
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+        }
+
+        .read-aloud-sentence {
+            font-size: 1.6rem;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 12px;
+        }
+
+        .read-aloud-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .record-btn.recording {
+            background: #e53e3e;
+        }
+
+        .read-aloud-words {
+            font-size: 1.6rem;
+            line-height: 2.2rem;
+        }
+
+        .ra-word {
+            font: inherit;
+            margin-right: 0.35em;
+        }
+
+        .ra-word.recognized {
+            color: #38a169;
+        }
+
+        .ra-word.not-recognized {
+            color: #e53e3e;
+            background: none;
+            border: none;
+            border-bottom: 2px dashed #e53e3e;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        .read-aloud-note {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-top: 8px;
+        }
+
         @keyframes fadeOut {
             from { opacity: 1; }
             to { opacity: 0; }
@@ -573,6 +632,49 @@
                 </div>
                 <div class="results-image">
                     <img src="/static/images/french-girl-icon.png" alt="French Girl Image" class="result-image">
+                </div>
+            </div>
+
+            <div class="read-aloud-section">
+                <h3>🗣️ Lecture à voix haute</h3>
+
+                <div class="input-group">
+                    <label for="read-aloud-select">Choisissez une phrase à lire :</label>
+                    <select id="read-aloud-select"></select>
+                </div>
+
+                <div class="input-group">
+                    <div class="read-aloud-sentence" id="read-aloud-sentence"></div>
+                    <div class="read-aloud-buttons">
+                        <button class="play-btn" onclick="playTts(currentReadAloudSentence())">🔊 Écouter la phrase</button>
+                        <button class="new-btn record-btn" id="record-btn" onclick="toggleRecording()">🎙️ Enregistrer</button>
+                        <span id="recording-text">Aucun enregistrement</span>
+                    </div>
+                </div>
+
+                <div class="input-group">
+                    <label for="read-aloud-upload">Ou téléchargez un fichier audio (.wav) :</label>
+                    <label class="file-upload-label" for="read-aloud-upload">Télécharger un fichier audio</label>
+                    <input type="file" id="read-aloud-upload" accept=".wav">
+                    <span id="read-aloud-file-text">Aucun fichier sélectionné</span>
+                </div>
+
+                <button class="analyze-btn" id="read-aloud-check-btn" onclick="checkReadAloud()">🔍 Vérifier</button>
+
+                <div id="read-aloud-no-speech" class="result-item hidden" style="margin-top: 20px;">
+                    <div class="result-label" id="read-aloud-no-speech-message"></div>
+                </div>
+
+                <div id="read-aloud-results" class="hidden">
+                    <div class="result-item" style="margin-top: 20px;">
+                        <div class="result-label" id="read-aloud-score"></div>
+                        <div class="read-aloud-words" id="read-aloud-words"></div>
+                        <div class="read-aloud-note">Les mots en rouge sont ceux que l'application n'a pas reconnus clairement ; ce n'est pas une évaluation précise de votre prononciation. Cliquez sur un mot rouge pour l'écouter.</div>
+                    </div>
+                    <div class="result-item">
+                        <div class="result-label">Whisper a entendu :</div>
+                        <div class="result-value" id="read-aloud-heard"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -857,6 +959,7 @@
 
             const speakerGender = document.getElementById('speaker-gender');
             speakerGender.value = 'feminine';
+            updateReadAloudSentence();
 
             const resultsSection = document.getElementById('results');
             resultsSection.classList.add('hidden');
@@ -884,6 +987,212 @@
             textInput.focus();
             setTimeout(() => textInput.classList.remove('pulse'), 2000);
         }
+
+        // --- Lecture à voix haute (read-aloud) -----------------------------------
+
+        const READ_ALOUD_SENTENCES = {{ read_aloud_sentences | tojson }};
+        let recordedBlob = null;
+        let recordedExtension = null;
+        let mediaRecorder = null;
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // The sentence form follows the speaker's gender ("allé" / "allée")
+        function readAloudSentence(index) {
+            const gender = document.getElementById('speaker-gender').value === 'feminine' ? 'feminine' : 'masculine';
+            return READ_ALOUD_SENTENCES[index][gender];
+        }
+
+        function currentReadAloudSentence() {
+            return readAloudSentence(document.getElementById('read-aloud-select').value);
+        }
+
+        function clearReadAloudResults() {
+            document.getElementById('read-aloud-results').classList.add('hidden');
+            document.getElementById('read-aloud-no-speech').classList.add('hidden');
+            document.getElementById('read-aloud-words').textContent = '';
+        }
+
+        function updateReadAloudSentence() {
+            const select = document.getElementById('read-aloud-select');
+            if (!select.options.length) {
+                READ_ALOUD_SENTENCES.forEach((_, index) => {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    select.appendChild(option);
+                });
+            }
+            Array.from(select.options).forEach(option => {
+                option.textContent = `${Number(option.value) + 1}. ${readAloudSentence(option.value)}`;
+            });
+            document.getElementById('read-aloud-sentence').textContent = currentReadAloudSentence();
+            clearReadAloudResults();
+        }
+
+        // Plays any French text with gTTS, falling back to the browser's speech synthesis
+        async function playTts(text) {
+            try {
+                const response = await fetch('/tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text, lang: 'fr' })
+                });
+                if (!response.ok) {
+                    throw new Error(`Erreur réseau : ${response.statusText}`);
+                }
+                const audioUrl = URL.createObjectURL(await response.blob());
+                const audio = new Audio(audioUrl);
+                audio.onended = () => URL.revokeObjectURL(audioUrl);
+                await audio.play();
+            } catch (error) {
+                console.error('gTTS error:', error);
+                if ('speechSynthesis' in window) {
+                    speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = 'fr-FR';
+                    utterance.rate = 0.9;
+                    speechSynthesis.speak(utterance);
+                } else {
+                    showToast('Votre navigateur ne supporte pas la synthèse vocale.');
+                }
+            }
+        }
+
+        async function toggleRecording() {
+            const recordBtn = document.getElementById('record-btn');
+
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                mediaRecorder.stop();
+                return;
+            }
+
+            if (!navigator.mediaDevices || !window.MediaRecorder) {
+                showToast("Votre navigateur ne permet pas d'enregistrer. Téléchargez plutôt un fichier .wav.");
+                return;
+            }
+
+            let stream;
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (error) {
+                console.error('Microphone error:', error);
+                showToast("Accès au micro refusé. Téléchargez plutôt un fichier .wav.");
+                return;
+            }
+
+            const formats = [['audio/webm', '.webm'], ['audio/ogg', '.ogg'], ['audio/mp4', '.mp4']];
+            const format = formats.find(([type]) => MediaRecorder.isTypeSupported(type));
+            mediaRecorder = format ? new MediaRecorder(stream, { mimeType: format[0] }) : new MediaRecorder(stream);
+            const chunks = [];
+
+            mediaRecorder.ondataavailable = event => chunks.push(event.data);
+            mediaRecorder.onstop = () => {
+                stream.getTracks().forEach(track => track.stop());
+                recordedBlob = new Blob(chunks, { type: mediaRecorder.mimeType });
+                recordedExtension = format ? format[1] : '.webm';
+                recordBtn.textContent = '🎙️ Enregistrer';
+                recordBtn.classList.remove('recording');
+                document.getElementById('recording-text').textContent = 'Enregistrement prêt';
+                // A new recording replaces any uploaded file
+                document.getElementById('read-aloud-upload').value = '';
+                document.getElementById('read-aloud-file-text').textContent = 'Aucun fichier sélectionné';
+            };
+
+            mediaRecorder.start();
+            recordBtn.textContent = '⏹️ Arrêter';
+            recordBtn.classList.add('recording');
+            document.getElementById('recording-text').textContent = 'Enregistrement en cours…';
+            clearReadAloudResults();
+        }
+
+        async function checkReadAloud() {
+            const upload = document.getElementById('read-aloud-upload').files[0];
+            if (!upload && !recordedBlob) {
+                showToast('Enregistrez-vous ou téléchargez un fichier .wav.');
+                return;
+            }
+
+            const formData = new FormData();
+            if (upload) {
+                formData.append('audio', upload);
+            } else {
+                formData.append('audio', recordedBlob, 'enregistrement' + recordedExtension);
+            }
+            formData.append('sentence', document.getElementById('read-aloud-select').value);
+            formData.append('gender', document.getElementById('speaker-gender').value);
+
+            const checkBtn = document.getElementById('read-aloud-check-btn');
+            checkBtn.disabled = true;
+            checkBtn.textContent = '⏳ Analyse en cours…';
+            try {
+                const response = await fetch('/read_aloud', { method: 'POST', body: formData });
+                const result = await response.json();
+                if (!response.ok || result.error) {
+                    throw new Error(result.error || response.statusText);
+                }
+                displayReadAloudResults(result);
+            } catch (error) {
+                console.error('Read-aloud error:', error);
+                showToast(`Erreur lors de l'analyse : ${error.message}`);
+            } finally {
+                checkBtn.disabled = false;
+                checkBtn.textContent = '🔍 Vérifier';
+            }
+        }
+
+        function displayReadAloudResults(result) {
+            clearReadAloudResults();
+
+            // Silent recording: show the message instead of a transcription
+            if (result.no_speech) {
+                document.getElementById('read-aloud-no-speech-message').textContent = result.message;
+                document.getElementById('read-aloud-no-speech').classList.remove('hidden');
+                return;
+            }
+
+            const words = document.getElementById('read-aloud-words');
+
+            result.words.forEach(word => {
+                let element;
+                if (word.matched) {
+                    element = document.createElement('span');
+                    element.className = 'ra-word recognized';
+                } else {
+                    element = document.createElement('button');
+                    element.className = 'ra-word not-recognized';
+                    element.title = 'Mot non reconnu clairement — cliquez pour écouter';
+                    element.onclick = () => playTts(word.text.replace(/[.,!?;:«»"]/g, ''));
+                }
+                element.textContent = word.text;
+                words.appendChild(element);
+            });
+
+            document.getElementById('read-aloud-score').textContent = `${result.matched}/${result.total} mots reconnus`;
+            document.getElementById('read-aloud-heard').textContent = result.heard || '(rien)';
+            document.getElementById('read-aloud-results').classList.remove('hidden');
+        }
+
+        document.getElementById('read-aloud-upload').addEventListener('change', function() {
+            const file = this.files[0];
+            const fileTextSpan = document.getElementById('read-aloud-file-text');
+            if (file && !file.name.toLowerCase().endsWith('.wav')) {
+                showToast('Seuls les fichiers .wav sont acceptés.');
+                this.value = '';
+                fileTextSpan.textContent = 'Aucun fichier sélectionné';
+                return;
+            }
+            fileTextSpan.textContent = file ? file.name : 'Aucun fichier sélectionné';
+            clearReadAloudResults();
+        });
+
+        document.getElementById('read-aloud-select').addEventListener('change', updateReadAloudSentence);
+        document.getElementById('speaker-gender').addEventListener('change', updateReadAloudSentence);
+        updateReadAloudSentence();
 
         speechSynthesis.onvoiceschanged = () => {};
     </script>

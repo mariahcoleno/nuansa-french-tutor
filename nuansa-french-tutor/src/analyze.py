@@ -86,6 +86,8 @@ class FrenchAnalyzer:
 
         self.d = enchant.Dict("fr_FR") 
         self.whisper_model = whisper.load_model("base")
+        # The read-aloud mode uses the larger "small" model, which hears words more accurately
+        self.read_aloud_whisper_model = whisper.load_model("small")
 
     def apply_corrections(self, text, matches, speaker_gender="masculine"):
         """
@@ -392,21 +394,35 @@ class FrenchAnalyzer:
         print(f"Found {len(errors)} custom-rule errors")
         return errors
 
+    def transcribe(self, audio, model=None):
+        """
+        Transcribe French speech with Whisper and return the raw text.
+        """
+        return self.transcribe_result(audio, model)["text"].strip()
+
+    def transcribe_result(self, audio, model=None):
+        """
+        Transcribe French speech (a file path or 16 kHz samples) with Whisper and return
+        Whisper's full result, including the segments' no-speech probabilities.
+        Uses the "base" model unless another model is given.
+        No mistranscription fixes are applied, so the read-aloud mode sees what Whisper heard.
+        """
+        model = model or self.whisper_model
+        # Force a more "stable" transcription
+        return model.transcribe(
+            audio,
+            language='fr',
+            task='transcribe',
+            fp16=False  # This also silences that 'FP16 not supported' warning!
+        )
+
     def analyze_speech(self, audio_file, speaker_gender="masculine"):
         """
         Analyze French speech audio for pronunciation and grammar errors.
         speaker_gender refers to the gender of the person speaking.
         """
-        # Force a more "stable" transcription
-        result = self.whisper_model.transcribe(
-            audio_file, 
-            language='fr', 
-            task='transcribe',
-            fp16=False  # This also silences that 'FP16 not supported' warning!
-        )
-        
         # Clean up the text
-        text = result["text"].replace(',', '').strip().lower()
+        text = self.transcribe(audio_file).replace(',', '').strip().lower()
         
         # Log the raw output so you can see if the hallucinations persist
         print(f"Raw Whisper Output: {text}")
