@@ -10,7 +10,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from flask import Flask, render_template, request, jsonify, send_file
 from src.analyze import FrenchAnalyzer, words_changed
-from src.read_aloud import NO_SPEECH_MESSAGE, compare_words, is_silent, no_speech_detected
+from src.read_aloud import (NO_SPEECH, SPEECH, STATUS_MESSAGES, compare_words, is_silent,
+                            speech_status)
 from gtts import gTTS
 from whisper import load_audio
 
@@ -261,7 +262,8 @@ def read_aloud():
     Returns JSON with the target sentence, the raw Whisper transcription, and each target
     word marked as recognized or not. No Whisper mistranscription fixes are applied,
     since they would hide the words the app didn't recognize.
-    If no speech is detected, returns "no_speech": true and a French message instead.
+    "status" is "speech", or "no_speech" (silence) / "unclear" (speech Whisper couldn't
+    make out), which return a French "message" instead of the transcription.
     """
     index = request.form.get('sentence', '')
     if not index.isdigit() or int(index) >= len(READ_ALOUD_SENTENCES):
@@ -293,28 +295,27 @@ def read_aloud():
                 print(f"ffmpeg conversion failed: {e}")
                 return jsonify({"error": "Impossible de convertir l'enregistrement (ffmpeg est-il installé ?)"}), 500
 
-        # Silent or near-silent recordings (e.g. the microphone's echo cancellation removed
-        # the sound) make Whisper invent words, so no transcription is shown for them
-        no_speech = jsonify({"target": target, "no_speech": True, "message": NO_SPEECH_MESSAGE})
+        # Silent or near-silent recordings make Whisper invent words, and unclear speech gives
+        # unreliable words, so neither shows a transcription, only a message
         samples = load_audio(wav)
         if is_silent(samples):
             print("Read-aloud: recording is silent")
-            return no_speech
+            return jsonify({"target": target, "status": NO_SPEECH, "message": STATUS_MESSAGES[NO_SPEECH]})
 
-        # The target sentence is deliberately not passed to Whisper as a prompt,
-        # since it would make Whisper write the expected words and hide real mistakes
-        result = analyzer.transcribe_result(samples, model=analyzer.read_aloud_whisper_model)
+        result = analyzer.transcribe_read_aloud(samples)
         heard = result["text"].strip()
-        print(f"Read-aloud target: '{target}', heard: '{heard}', "
-              f"no-speech probabilities: {[round(s['no_speech_prob'], 2) for s in result['segments']]}")
-        if no_speech_detected(heard, result["segments"]):
-            return no_speech
+        status = speech_status(heard, result["segments"])
+        print(f"Read-aloud target: '{target}', heard: '{heard}', status: {status}, "
+              f"(no_speech_prob, avg_logprob) per segment: "
+              f"{[(round(s['no_speech_prob'], 2), round(s['avg_logprob'], 2)) for s in result['segments']]}")
+        if status != SPEECH:
+            return jsonify({"target": target, "status": status, "message": STATUS_MESSAGES[status]})
 
         comparison = compare_words(target, heard)
 
         return jsonify({
             "target": target,
-            "no_speech": False,
+            "status": SPEECH,
             "heard": heard,
             "words": comparison["words"],
             "matched": comparison["matched"],

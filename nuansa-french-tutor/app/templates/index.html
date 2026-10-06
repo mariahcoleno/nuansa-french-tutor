@@ -661,8 +661,8 @@
 
                 <button class="analyze-btn" id="read-aloud-check-btn" onclick="checkReadAloud()">🔍 Vérifier</button>
 
-                <div id="read-aloud-no-speech" class="result-item hidden" style="margin-top: 20px;">
-                    <div class="result-label" id="read-aloud-no-speech-message"></div>
+                <div id="read-aloud-message" class="result-item hidden" style="margin-top: 20px;">
+                    <div class="result-label" id="read-aloud-message-text"></div>
                 </div>
 
                 <div id="read-aloud-results" class="hidden">
@@ -1014,7 +1014,7 @@
 
         function clearReadAloudResults() {
             document.getElementById('read-aloud-results').classList.add('hidden');
-            document.getElementById('read-aloud-no-speech').classList.add('hidden');
+            document.getElementById('read-aloud-message').classList.add('hidden');
             document.getElementById('read-aloud-words').textContent = '';
         }
 
@@ -1078,7 +1078,11 @@
 
             let stream;
             try {
-                stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                // This is a pronunciation tool, not a call: echo cancellation would remove
+                // sound played near the mic and noise suppression can blur the speech
+                stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: false, noiseSuppression: false }
+                });
             } catch (error) {
                 console.error('Microphone error:', error);
                 showToast("Accès au micro refusé. Téléchargez plutôt un fichier .wav.");
@@ -1148,10 +1152,10 @@
         function displayReadAloudResults(result) {
             clearReadAloudResults();
 
-            // Silent recording: show the message instead of a transcription
-            if (result.no_speech) {
-                document.getElementById('read-aloud-no-speech-message').textContent = result.message;
-                document.getElementById('read-aloud-no-speech').classList.remove('hidden');
+            // Silent or unclear recording: show the message instead of a transcription
+            if (result.status !== 'speech') {
+                document.getElementById('read-aloud-message-text').textContent = result.message;
+                document.getElementById('read-aloud-message').classList.remove('hidden');
                 return;
             }
 
