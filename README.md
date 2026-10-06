@@ -16,6 +16,14 @@ The French Tutor gives explainable feedback on written and spoken French by comb
   - Transcription Cleanup: A fixed list of fixes for common Whisper mistranscriptions (e.g., "alair" → "aller", "ecolay" → "école") is applied before grammar checking. This is not a pronunciation score; the app does not measure how a word was pronounced.
 - Text-to-Speech (TTS): Reads the corrected sentence aloud in French using gTTS (Google Text-to-Speech).
 - Error Table: Shows each error, a suggested fix, and an explanation in French.
+- Read-Aloud Practice ("Lecture à voix haute"):
+  - Pick a practice sentence (the corrected versions of the sample sentences, with "allé"/"allée" following the selected gender) and click "🔊 Écouter la phrase" to hear it with gTTS.
+  - Record yourself in the browser with the microphone, or upload a `.wav` file. Browser recordings (`.webm`, `.ogg`, `.mp4`) are converted to `.wav` with FFmpeg.
+  - Whisper transcribes the recording with the larger "small" model (the grammar analysis keeps the faster "base" model), **without** the transcription cleanup list and without giving Whisper the target sentence as a hint, so mistranscriptions are not hidden. The transcription is then aligned with the target sentence word by word, using `difflib` so one missing word doesn't mark every following word wrong.
+  - Because this checks what was said, not spelling, words that sound the same count as a match: case, punctuation and accents are ignored ("a"/"à", "ou"/"où", "ecole"/"école"), and word endings that sound like /e/ (-é, -ée, -és, -ées, -er, -ez) match each other ("allé"/"aller"/"allez", "marché"/"marcher").
+  - The target sentence is shown in its correct spelling, with recognized words in green and unrecognized or missing words in red, plus a score such as "4/5 mots reconnus". Click a red word to hear it.
+  - Silent or near-silent recordings (for example when the browser's echo cancellation removes the sound) are detected from the recording's loudness and Whisper's no-speech probability. Instead of a transcription, the app shows « Aucune parole détectée. Rapprochez-vous du micro et réessayez. », since Whisper tends to invent words from near-silence.
+  - Red words are words the app didn't recognize clearly. This is not a precise pronunciation score: Whisper can mishear a well-pronounced word.
 
 ### Future Ideas
 - Real pronunciation scoring: compare the learner's audio with a reference pronunciation (e.g., phoneme-level alignment) to point out mispronounced sounds, instead of only fixing known mistranscriptions.
@@ -34,6 +42,7 @@ As project lead, I was responsible for:
 The grammar and spelling logic is covered by automated unit tests in `nuansa-french-tutor/tests/`:
 - `test_custom_rules.py`: Checks the custom rules: contractions, feminine speaker agreement, "c'est" vs. "il/elle est", and the French explanations shown in the error table. It also checks that **correct sentences stay unchanged** (e.g., "Je suis à Paris.", "Les filles sont mignonnes.", "Je vais commencer à le faire.") and produce no error rows, so the rules don't over-correct.
 - `test_language_tool.py`: Checks that LanguageTool and the French dictionary catch grammar and spelling errors.
+- `test_read_aloud.py`: Checks the read-aloud word comparison: a perfect match, a missing word, a wrong word, extra words, case/punctuation differences, words that sound the same (accents, /e/ endings such as "marché"/"marcher"), and the detection of silent recordings.
 
 Speech transcription and text-to-speech are not covered by automated tests; they were checked by hand with the sample audio files. See "Run the Tests" below.
 
@@ -94,11 +103,13 @@ mistranscriptions                     │
 ```
 
 ### Files
-- `nuansa-french-tutor/app/main.py`: Runs the Flask application, with routes for the homepage, text analysis (`/analyze_text`), audio analysis (`/analyze_audio`), text-to-speech (`/tts`), and static files.
+- `nuansa-french-tutor/app/main.py`: Runs the Flask application, with routes for the homepage, text analysis (`/analyze_text`), audio analysis (`/analyze_audio`), read-aloud practice (`/read_aloud`), text-to-speech (`/tts`), and static files.
 - `nuansa-french-tutor/app/templates/index.html`: Provides the user interface with input fields for text or audio, buttons to trigger analysis, and a section to display feedback results.
 - `nuansa-french-tutor/app/static/images/french-girl-icon.png`: French tutor image displayed in the application.
 - `nuansa-french-tutor/app/static/audio/input.wav`, `input2.wav`, `input2.m4a`: Sample audio files containing example input.
 - `nuansa-french-tutor/src/analyze.py`: Transcribes audio with Whisper, fixes common Whisper mistranscriptions, checks spelling with pyenchant and grammar with LanguageTool plus custom rules, and generates audio with gTTS.
+- `nuansa-french-tutor/src/read_aloud.py`: Compares the read-aloud target sentence with the Whisper transcription word by word.
+- `nuansa-french-tutor/tests/test_read_aloud.py`: Contains unit tests for the read-aloud word comparison.
 - `nuansa-french-tutor/tests/test_language_tool.py`: Contains unit tests for grammar-checking functionality using language_tool_python.
 - `nuansa-french-tutor/tests/test_custom_rules.py`: Contains unit tests for the custom regex rules (contractions, feminine speaker agreement, and the custom-rule errors shown in the error table).
 - `requirements.txt`: Lists the Python dependencies required to run the application.
@@ -177,7 +188,7 @@ nuansa-french-tutor/
 The terminal prompt should end with `nuansa-french-tutor %` with the virtual environment activated.
 1. Start the Flask application: `python3 -m app.main`
    - For development, turn on the Flask debugger with `FLASK_DEBUG=1 python3 -m app.main` (it is off by default because it can run code from the browser).
-2. The first startup may take several minutes. LanguageTool may download its grammar engine the first time the application is run. This download may be approximately 259 MB.
+2. The first startup may take several minutes. LanguageTool may download its grammar engine the first time the application is run. This download may be approximately 259 MB. Whisper also downloads its "base" (about 140 MB) and "small" (about 460 MB) models on first run.
 3. Wait until the terminal displays (by default, the debugger is off):
    ```
     * Serving Flask app 'main'
@@ -202,7 +213,7 @@ From the **inner application source folder** (the same folder used to run the ap
 python3 -m unittest discover tests
 ```
 - The tests need Java 17 (for LanguageTool) and the French pyenchant dictionary, like the app itself.
-- `test_language_tool.py` loads the full analyzer, including the Whisper model, so the first run can take a few minutes.
+- `test_language_tool.py` loads the full analyzer, including both Whisper models, so the first run can take a few minutes.
 - All tests should finish with `OK`. The tests print debug output (such as "After contraction corrections: ...") while they run; this is expected.
 
 ### Sample Data
@@ -234,9 +245,11 @@ python3 -m unittest discover tests
     - `src/`
       - `__init__.py`
       - `analyze.py` 
+      - `read_aloud.py`
     - `tests/`
       - `test_custom_rules.py`
       - `test_language_tool.py`
+      - `test_read_aloud.py`
 
 ### Additional Notes
 - The app runs on port 5001 to avoid common port conflicts. Access it at `http://127.0.0.1:5001` after starting the server.
